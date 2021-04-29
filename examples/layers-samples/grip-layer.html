@@ -1,0 +1,231 @@
+<!doctype html>
+<!--
+Copyright 2018 The Immersive Web Community Group
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
+    <meta name='mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+    <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
+    <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
+    <link rel='stylesheet' href='../css/common.css'>
+
+    <title>360 Photos</title>
+  </head>
+  <body>
+    <header>
+      <details open>
+        <summary>360 Photos</summary>
+        <p>
+          Example of a media layer attached to the controller space.
+          <a class="back" href="./">Back</a>
+        </p>
+      </details>
+    </header>
+	<script src="../../build/webxr-layers-polyfill.js"></script>
+    <script type="module">
+      import {WebXRButton} from '../js/util/webxr-button.js';
+      import {Scene, WebXRView} from '../js/render/scenes/scene.js';
+      import {Renderer, createWebGLContext} from '../js/render/core/renderer.js';
+      import {Gltf2Node} from '../js/render/nodes/gltf2.js';
+      import {SkyboxNode} from '../js/render/nodes/skybox.js';
+      import {InlineViewerHelper} from '../js/util/inline-viewer-helper.js';
+      import {QueryArgs} from '../js/util/query-args.js';
+
+	  // use the layers polyfill
+	  let layersPolyfill = new WebXRLayersPolyfill()
+
+      let video = document.createElement('video');
+      video.loop = true;
+      video.src = '../media/video/bbb-sunflower-540p2-1min.webm';
+
+      // XR globals.
+      let xrButton = null;
+      let xrImmersiveRefSpace = null;
+      let inlineViewerHelper = null;
+
+      // WebGL scene globals.
+      let gl = null;
+      let renderer = null;
+      let scene = new Scene();
+      let xrGLFactory = null;1
+      let proj_layer = null;
+      let quadlayer = null;
+      let xrFramebuffer = null;
+      let glLayer = null;
+      let use_layer = false;
+
+      let vr_supported = false;
+
+      function initXR() {
+        xrButton = new WebXRButton({
+          onRequestSession: onRequestSession,
+          onEndSession: onEndSession
+        });
+        document.querySelector('header').appendChild(xrButton.domElement);
+
+        if (navigator.xr) {
+          navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+            vr_supported = true;
+            if (vr_supported)
+              xrButton.enabled = true;
+          });
+
+          navigator.xr.requestSession('inline').then(onSessionStarted);
+        }
+      }
+
+      function initGL() {
+        if (gl)
+          return;
+
+        gl = createWebGLContext({
+          webgl2: true,
+          xrCompatible: true
+        });
+        document.body.appendChild(gl.canvas);
+
+        function onResize() {
+          gl.canvas.width = gl.canvas.clientWidth * window.devicePixelRatio;
+          gl.canvas.height = gl.canvas.clientHeight * window.devicePixelRatio;
+        }
+        window.addEventListener('resize', onResize);
+        onResize();
+
+        renderer = new Renderer(gl);
+        scene.setRenderer(renderer);
+        scene.enableStats(false);
+      }
+
+      function onRequestSession() {
+        return navigator.xr.requestSession('immersive-vr', { requiredFeatures: ['layers']} ).then((session) => {
+          xrButton.setSession(session);
+          session.isImmersive = true;
+          onSessionStarted(session);
+        });
+      }
+
+      function onSelect(ev) {
+        let session = ev.frame.session;
+        if (!session.isImmersive || !quadlayer)
+          return;
+      }
+
+      function onSessionStarted(session) {
+        session.addEventListener('end', onSessionEnded);
+        session.addEventListener('select', onSelect);
+
+        initGL();
+        scene.inputRenderer.useProfileControllerMeshes(session);
+
+        // When rendering 360 photos/videos you want to ensure that the user's
+        // head is always at the center of the rendered media. Otherwise users
+        // with 6DoF hardware could walk towards the edges and see a very skewed
+        // or outright broken view of the image. To prevent that, we request a
+        // 'position-disabled' reference space, which suppresses any positional
+        // information from the headset. (As an added bonus this mode may be
+        // more power efficient on some hardware!)
+        let refSpaceType = session.isImmersive ? 'local' : 'viewer';
+        session.requestReferenceSpace(refSpaceType).then((refSpace) => {
+          if (session.isImmersive) {
+            xrImmersiveRefSpace = refSpace;
+            xrGLFactory = new XRWebGLBinding(session, gl);
+            proj_layer = xrGLFactory.createProjectionLayer({});
+            xrFramebuffer = gl.createFramebuffer();
+
+            session.updateRenderState({ layers: [ proj_layer ] });
+          } else {
+            inlineViewerHelper = new InlineViewerHelper(gl.canvas, refSpace);
+            glLayer = new XRWebGLLayer(session, gl);
+            session.updateRenderState({ baseLayer: glLayer });
+          }
+          session.requestAnimationFrame(onXRFrame);
+        });
+      }
+
+      function onEndSession(session) {
+        session.end();
+      }
+
+      function onSessionEnded(event) {
+        if (event.session.isImmersive) {
+          xrButton.setSession(null);
+        }
+        quadlayer = null;
+        video.pause();
+      }
+
+      function onXRFrame(t, frame) {
+        let session = frame.session;
+        let refSpace = session.isImmersive ?
+                         xrImmersiveRefSpace :
+                         inlineViewerHelper.referenceSpace;
+        let pose = frame.getViewerPose(refSpace);
+
+        session.requestAnimationFrame(onXRFrame);
+
+        let glLayer = null;
+        if (session.isImmersive && session.inputSources.length && !quadlayer) {
+          let xrMediaFactory = new XRMediaBinding(session);
+          quadlayer = xrMediaFactory.createQuadLayer(video, { space: session.inputSources[0].gripSpace, layout: "stereo-top-bottom", transform: new XRRigidTransform({x: 0, y: -1, z: 0}, {x: -0.7071, y: 0, z: 0, w: 0.7071}) });
+          video.play();
+          session.updateRenderState({ layers: [ quadlayer, proj_layer ] });
+        }
+
+        if (pose) {
+          let views = [];
+          for (let view of pose.views) {
+            let viewport = null;
+            if (session.isImmersive) {
+              glLayer = xrGLFactory.getViewSubImage(proj_layer, view);
+              glLayer.framebuffer = xrFramebuffer;
+
+              viewport = glLayer.viewport;
+              gl.bindFramebuffer(gl.FRAMEBUFFER, xrFramebuffer);
+              gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, glLayer.colorTexture, 0);
+              gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, glLayer.depthStencilTexture, 0);
+              gl.enable(gl.SCISSOR_TEST);
+              gl.enable(gl.DEPTH_TEST);
+              gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+            }
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            if (session.isImmersive) {
+              gl.disable(gl.SCISSOR_TEST);
+            }
+            let renderView = new WebXRView(view, glLayer, viewport);
+            views.push(renderView);
+          }
+
+          scene.updateInputSources(frame, refSpace);
+          scene.drawViewArray(views);
+        }
+
+        scene.endFrame();
+      }
+
+      // Start the XR application.
+      initXR();
+    </script>
+  </body>
+</html>
