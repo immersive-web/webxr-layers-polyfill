@@ -4,6 +4,12 @@
 	"description": "",
 	"main": "build/webxr-layers-polyfill.js",
 	"module": "build/webxr-layers-polyfill.module.js",
+	"author": "DM Liao <dm.liao@fb.com>",
+	"license": "Apache-2.0",
+	"repository": "https://github.com/immersive-web/webxr-layers-polyfill",
+	"files": [
+		"build/**/*"
+	],
 	"scripts": {
 		"test": "jest",
 		"build-module": "cross-env NODE_ENV=production rollup -c rollup.config.module.js",
@@ -16,8 +22,6 @@
 		"preversion": "npm ci",
 		"version": "npm run build && git add -f ./build"
 	},
-	"author": "DM Liao <dm.liao@fb.com>",
-	"license": "Apache-2.0",
 	"devDependencies": {
 		"@babel/core": "^7.11.6",
 		"@rollup/plugin-commonjs": "^17.1.0",
