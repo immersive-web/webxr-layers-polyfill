@@ -368,7 +368,7 @@ export class XRSessionWithLayer {
 
 	get renderState() {
 		if (!this.activeRenderState) {
-			return (this as any)._renderState
+			return Object.assign({}, (this as any)._renderState, { layers: [] })
 		}
 		return this.activeRenderState
 	}
