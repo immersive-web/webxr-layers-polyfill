@@ -14,12 +14,12 @@
  */
 
 import { mat4 } from 'gl-matrix'
-import type { XRFrame, XRPose, XRView } from 'webxr'
+import type { XRFrame, XRView } from 'webxr'
 import XRCubeLayer from '../api/XRCubeLayer'
 import { XRSessionWithLayer } from '../api/XRSessionWithLayer'
 import { XRLayerLayout, XRWebGLRenderingContext } from '../types'
 import { LayerRenderer } from './base-renderer'
-import { createProgram } from './webgl-utils'
+import { applyVAOExtension, createProgram, VAOFunctions } from './webgl-utils'
 
 // template tagging for syntax highlight
 const glsl = (x) => x
@@ -69,6 +69,8 @@ export class CubeRenderer implements LayerRenderer {
 	protected positionBuffer: WebGLBuffer
 
 	protected layer: XRCubeLayer
+	protected vaoGl: VAOFunctions
+	protected vao: WebGLVertexArrayObject | WebGLVertexArrayObjectOES
 	protected program: WebGLProgram
 
 	private programInfo: CubeProgramInfo
@@ -94,6 +96,8 @@ export class CubeRenderer implements LayerRenderer {
 				u_projectionMatrix: gl.getUniformLocation(this.program, 'u_projectionMatrix'),
 			},
 		}
+		// setup geometry and VAO
+		this._createVAOs()
 	}
 
 	public render(session: XRSessionWithLayer, frame: XRFrame) {
@@ -119,6 +123,7 @@ export class CubeRenderer implements LayerRenderer {
 			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 
 			this._renderInternal(this.layer.orientation, view)
+			gl.bindTexture(gl.TEXTURE_CUBE_MAP, null)
 		}
 	}
 
@@ -175,15 +180,9 @@ export class CubeRenderer implements LayerRenderer {
 	_poseOrientationMatrix: mat4
 	_renderInternal(orientation: DOMPointReadOnly, view: XRView) {
 		let gl = this.gl
-
-		if (!this.positionBuffer) {
-			this._initBuffers()
-			this._setBuffers(true)
-		}
-
 		// Tell it to use our program (pair of shaders)
 		gl.useProgram(this.program)
-		this._setBuffers()
+		this.vaoGl.bindVertexArray(this.vao)
 
 		// MATRIX
 		// set matrix
@@ -221,36 +220,33 @@ export class CubeRenderer implements LayerRenderer {
 		var offset = 0
 		var count = this.positionPoints.length / 3
 		gl.drawArrays(primitiveType, offset, count)
-	}
-
-	_initBuffers() {
-		let gl = this.gl
-
-		// A_POSITION
-		// Create a buffer to put three 2d clip space points in
-		this.positionBuffer = gl.createBuffer()
+		this.vaoGl.bindVertexArray(null)
 	}
 
 	_recalculateVertices() {
 		this.positionPoints = this.createPositionPoints()
 	}
 
-	_setBuffers(shouldResetData?: boolean) {
-		if (shouldResetData) {
-			this._recalculateVertices()
-		}
-
+	_createVAOs() {
+		this._recalculateVertices()
 		let gl = this.gl
+
+		// makes sure that VAOs are usable on both WebGL1 and WebGL2
+		this.vaoGl = applyVAOExtension(gl)
+
+		// position
+		let positionBuffer = gl.createBuffer()
+		this.vao = this.vaoGl.createVertexArray()
+
+		this.vaoGl.bindVertexArray(this.vao)
 		// Turn on the position attribute
 		gl.enableVertexAttribArray(this.programInfo.attribLocations.a_position)
 
 		// Bind the position buffer.
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer)
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
 
-		if (shouldResetData) {
-			const positions = this.positionPoints
-			gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW)
-		}
+		const positions = this.positionPoints
+		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW)
 
 		// Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
 		var size = 3 // 3 components per iteration
@@ -266,5 +262,8 @@ export class CubeRenderer implements LayerRenderer {
 			stride,
 			offset
 		)
+
+		this.vaoGl.bindVertexArray(null)
+		gl.bindBuffer(gl.ARRAY_BUFFER, null)
 	}
 }

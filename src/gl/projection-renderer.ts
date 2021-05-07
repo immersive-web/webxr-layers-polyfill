@@ -125,8 +125,9 @@ class ProjectionRenderer implements LayerRenderer {
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-		} else if (gl instanceof WebGL2RenderingContext) {
-			gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0])
+		} else {
+			throw new Error(`Created a texture projection renderer instead of a texture-array projection renderer for a texture-array layer. 
+This is probably an error with the polyfill itself; please file an issue on Github if you run into this.`)
 		}
 
 		for (let view of session.internalViews) {
@@ -139,6 +140,7 @@ class ProjectionRenderer implements LayerRenderer {
 				this._renderInternal()
 			}
 		}
+		gl.bindTexture(gl.TEXTURE_2D, null)
 	}
 
 	_renderInternal() {
@@ -231,6 +233,7 @@ class ProjectionRenderer implements LayerRenderer {
 		)
 
 		this.vaoGl.bindVertexArray(null)
+		gl.bindBuffer(gl.ARRAY_BUFFER, null)
 	}
 
 	_setStereoTextureBuffer(index: number) {
@@ -255,6 +258,7 @@ class ProjectionRenderer implements LayerRenderer {
 			stride,
 			offset
 		)
+		gl.bindBuffer(gl.ARRAY_BUFFER, null)
 	}
 
 	_createTextureUVs() {
@@ -427,6 +431,7 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer implements Layer
 
 			this._renderInternal(index)
 		}
+		gl.bindTexture(gl.TEXTURE_2D_ARRAY, null)
 	}
 
 	_renderInternal(layer: number = 0) {
