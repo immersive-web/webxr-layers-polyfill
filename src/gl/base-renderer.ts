@@ -276,6 +276,7 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view, layer)
 				}
+				gl.bindTexture(gl.TEXTURE_2D_ARRAY, null)
 			} else {
 				if (this.layer.isMediaLayer()) {
 					// we have to bind the media to gl instead!
@@ -319,6 +320,7 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view)
 				}
+				gl.bindTexture(gl.TEXTURE_2D, null)
 			}
 		}
 	}
@@ -401,6 +403,7 @@ export class CompositionLayerRenderer {
 			stride,
 			offset
 		)
+		gl.bindBuffer(gl.ARRAY_BUFFER, null)
 	}
 
 	// INITIALIZATION
@@ -517,6 +520,7 @@ export class CompositionLayerRenderer {
 		)
 
 		this.vaoGl.bindVertexArray(null)
+		gl.bindBuffer(gl.ARRAY_BUFFER, null)
 	}
 
 	// RENDERING
