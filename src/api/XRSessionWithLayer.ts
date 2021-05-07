@@ -157,6 +157,11 @@ export class XRSessionWithLayer {
 					// blend function to operate. And for alpha to multiply.
 					gl.enable(gl.BLEND)
 					gl.disable(gl.DEPTH_TEST)
+
+					let prevBlendSrcRGB = gl.getParameter(gl.BLEND_SRC_RGB)
+					let prevBlendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA)
+					let prevBlendDestRGB = gl.getParameter(gl.BLEND_DST_RGB)
+					let prevBlendDestAlpha = gl.getParameter(gl.BLEND_DST_ALPHA)
 					gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 					// get all layers!
@@ -247,6 +252,9 @@ export class XRSessionWithLayer {
 					if (prevCullFace) {
 						gl.enable(gl.CULL_FACE)
 					}
+
+					// restore previous blendFunc
+					gl.blendFuncSeparate(prevBlendSrcRGB, prevBlendDestRGB, prevBlendSrcAlpha, prevBlendDestAlpha)
 
 					// run task queue
 					while (this.taskQueue.length > 0) {
