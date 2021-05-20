@@ -117,6 +117,8 @@ class ProjectionRenderer implements LayerRenderer {
 		// get texture type of layer
 		const textureType = this.layer.getTextureType()
 
+		const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D)
+
 		if (textureType === XRTextureType.texture) {
 			gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0])
 
@@ -140,7 +142,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
 				this._renderInternal()
 			}
 		}
-		gl.bindTexture(gl.TEXTURE_2D, null)
+		gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding)
 	}
 
 	_renderInternal() {
@@ -420,6 +422,8 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer implements Layer
 		let baseLayer = session.getBaseLayer()
 
 		// get texture type of layer
+		const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY)
+
 		gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0])
 		gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 		gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
@@ -431,7 +435,7 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer implements Layer
 
 			this._renderInternal(index)
 		}
-		gl.bindTexture(gl.TEXTURE_2D_ARRAY, null)
+		gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding)
 	}
 
 	_renderInternal(layer: number = 0) {

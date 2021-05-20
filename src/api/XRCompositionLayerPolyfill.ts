@@ -469,9 +469,10 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 			console.warn(
 				'texture-array layers are supported...questionably in the polyfill at the moment. Use at your own risk.'
 			)
-			// TODO: This is probably wrong. It renders without error, but
-			// it renders...questionably.
 			// create a 2d texture array
+			const existingTextureBinding = this.context.getParameter(
+				this.context.TEXTURE_BINDING_2D_ARRAY
+			)
 			this.context.bindTexture(this.context.TEXTURE_2D_ARRAY, texture)
 			if (
 				textureFormat === this.context.DEPTH_COMPONENT ||
@@ -500,8 +501,10 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 					null
 				)
 			}
+			this.context.bindTexture(this.context.TEXTURE_2D_ARRAY, existingTextureBinding)
 		} else {
 			// regular texture 2d
+			const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_2D)
 			this.context.bindTexture(this.context.TEXTURE_2D, texture)
 			this.context.texImage2D(
 				this.context.TEXTURE_2D,
@@ -514,8 +517,8 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 				texImageType,
 				null
 			)
+			this.context.bindTexture(this.context.TEXTURE_2D, existingTextureBinding)
 		}
-
 		return textureMeta
 	}
 
