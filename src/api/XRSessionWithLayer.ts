@@ -93,7 +93,7 @@ export class XRSessionWithLayer {
 					}
 
 					gl.bindFramebuffer(gl.FRAMEBUFFER, this.tempFramebuffer)
-					gl.clearColor(0, 0, 0, 0);
+					gl.clearColor(0, 0, 0, 0)
 					for (let layer of this.layers) {
 						// TODO: spec says all of them should be cleared, but clearing quad layers causes the layer
 						// to disappear...
@@ -254,7 +254,12 @@ export class XRSessionWithLayer {
 					}
 
 					// restore previous blendFunc
-					gl.blendFuncSeparate(prevBlendSrcRGB, prevBlendDestRGB, prevBlendSrcAlpha, prevBlendDestAlpha)
+					gl.blendFuncSeparate(
+						prevBlendSrcRGB,
+						prevBlendDestRGB,
+						prevBlendSrcAlpha,
+						prevBlendDestAlpha
+					)
 
 					// run task queue
 					while (this.taskQueue.length > 0) {

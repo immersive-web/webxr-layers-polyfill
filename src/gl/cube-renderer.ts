@@ -111,6 +111,7 @@ export class CubeRenderer implements LayerRenderer {
 			gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height)
 
 			gl.activeTexture(gl.TEXTURE0)
+			const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_CUBE_MAP);
 			// STEREO CASE: 0 is left eye, 1 is right eye
 			if (this.layer.layout === XRLayerLayout.stereo) {
 				const index = view.eye === 'right' ? 1 : 0
@@ -123,7 +124,7 @@ export class CubeRenderer implements LayerRenderer {
 			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 
 			this._renderInternal(this.layer.orientation, view)
-			gl.bindTexture(gl.TEXTURE_CUBE_MAP, null)
+			gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding)
 		}
 	}
 

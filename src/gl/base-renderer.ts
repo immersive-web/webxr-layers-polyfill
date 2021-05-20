@@ -211,6 +211,7 @@ export class CompositionLayerRenderer {
 				type: XRTextureType.texture,
 			}
 
+			const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D)
 			gl.bindTexture(gl.TEXTURE_2D, this.mediaTexture)
 			gl.texImage2D(
 				gl.TEXTURE_2D,
@@ -223,7 +224,7 @@ export class CompositionLayerRenderer {
 				gl.UNSIGNED_BYTE,
 				null
 			)
-			gl.bindTexture(gl.TEXTURE_2D, null)
+			gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding)
 		}
 
 		// setup geometry and VAO
@@ -255,6 +256,8 @@ export class CompositionLayerRenderer {
 
 				// if we're using texture-array, there is always only a single entry in layer.colorTextures
 				// and instead we use the layers uniform to render out individual pieces.
+				const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY)
+
 				gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0])
 				gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 				gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
@@ -276,8 +279,10 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view, layer)
 				}
-				gl.bindTexture(gl.TEXTURE_2D_ARRAY, null)
+				gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding)
 			} else {
+				const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D)
+
 				if (this.layer.isMediaLayer()) {
 					// we have to bind the media to gl instead!
 					gl.bindTexture(gl.TEXTURE_2D, this.mediaTexture)
@@ -320,7 +325,7 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view)
 				}
-				gl.bindTexture(gl.TEXTURE_2D, null)
+				gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding)
 			}
 		}
 	}

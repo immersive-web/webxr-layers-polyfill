@@ -135,6 +135,7 @@ export default class XRCubeLayer extends XRCompositionLayerPolyfill {
 			texture,
 		}
 
+		const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_CUBE_MAP)
 		this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, texture)
 
 		// initialize size for all the sides of the cubemap
@@ -151,6 +152,7 @@ export default class XRCubeLayer extends XRCompositionLayerPolyfill {
 				null
 			)
 		}
+		this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, existingTextureBinding)
 
 		return textureMeta
 	}
@@ -166,6 +168,7 @@ export default class XRCubeLayer extends XRCompositionLayerPolyfill {
 			texture,
 		}
 
+		const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_CUBE_MAP)
 		this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, texture)
 
 		// DEPTH_COMPONENT is not a valid internalFormat in WebGL2.
@@ -191,6 +194,7 @@ export default class XRCubeLayer extends XRCompositionLayerPolyfill {
 				null
 			)
 		}
+		this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, existingTextureBinding)
 
 		return textureMeta
 	}
