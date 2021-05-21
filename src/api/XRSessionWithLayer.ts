@@ -93,6 +93,7 @@ export class XRSessionWithLayer {
 					}
 
 					gl.bindFramebuffer(gl.FRAMEBUFFER, this.tempFramebuffer)
+					const existingClearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE)
 					gl.clearColor(0, 0, 0, 0)
 					for (let layer of this.layers) {
 						// TODO: spec says all of them should be cleared, but clearing quad layers causes the layer
@@ -140,6 +141,12 @@ export class XRSessionWithLayer {
 					// clear base framebuffer before rendering anything
 					gl.bindFramebuffer(gl.FRAMEBUFFER, this.getBaseLayer().framebuffer)
 					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+					gl.clearColor(
+						existingClearColor[0],
+						existingClearColor[1],
+						existingClearColor[2],
+						existingClearColor[3]
+					)
 				}
 
 				animationFrameCallback(time, frame)
@@ -157,6 +164,7 @@ export class XRSessionWithLayer {
 					// blend function to operate. And for alpha to multiply.
 					gl.enable(gl.BLEND)
 					gl.disable(gl.DEPTH_TEST)
+					gl.disable(gl.CULL_FACE)
 
 					let prevBlendSrcRGB = gl.getParameter(gl.BLEND_SRC_RGB)
 					let prevBlendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA)

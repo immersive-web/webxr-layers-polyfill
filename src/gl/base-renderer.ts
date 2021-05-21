@@ -540,6 +540,7 @@ export class CompositionLayerRenderer {
 		let gl = this.gl
 
 		// Tell it to use our program (pair of shaders)
+		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 		this.vaoGl.bindVertexArray(this.vao)
 
@@ -565,6 +566,7 @@ export class CompositionLayerRenderer {
 		gl.drawArrays(primitiveType, offset, count)
 
 		this.vaoGl.bindVertexArray(null)
+		gl.useProgram(existingProgram)
 	}
 
 	// this is used only for stereo-left-right and stereo-top-bottom layers, and is used to render
@@ -577,6 +579,7 @@ export class CompositionLayerRenderer {
 		this.vaoGl.bindVertexArray(this.vao)
 
 		// Tell it to use our program (pair of shaders)
+		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 
 		// set position array and texture array
@@ -607,6 +610,7 @@ export class CompositionLayerRenderer {
 		gl.drawArrays(primitiveType, offset, count)
 
 		this.vaoGl.bindVertexArray(null)
+		gl.useProgram(existingProgram)
 	}
 
 	_setTransformMatrix(session: XRSessionWithLayer, frame: XRFrame, view: XRView) {
