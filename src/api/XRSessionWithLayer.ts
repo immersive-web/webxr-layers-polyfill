@@ -277,18 +277,24 @@ export class XRSessionWithLayer {
 	// that overrides layers and sets the baseLayer to one that is custom created in this
 	// polyfilled session, and then adds the contents of the other layers onto that base layer
 	// and saves the custom layers as state on the object
-	public updateRenderState(XRRenderStateInit: XRRenderStateWithLayer) {
+	public updateRenderState(XRRenderStateInit: XRRenderStateWithLayer): void {
 		this.existingBaseLayer = XRRenderStateInit.baseLayer
-
-		if (!XRRenderStateInit.layers) {
-			// just go on without doing anything
-			return (this as any)._updateRenderState(XRRenderStateInit)
-		}
 
 		this.layers = XRRenderStateInit.layers || []
 
-		// expose the layers
-		this.activeRenderState = XRRenderStateInit
+		if (!this.activeRenderState) {
+			this.createActiveRenderState()
+		}
+
+		this.activeRenderState = { ...this.activeRenderState, ...XRRenderStateInit }
+
+		if (!XRRenderStateInit.layers) {
+			// no layer information in this renderState, so we don't need to update
+			// context or the renderState object before passing it to the underlying
+			// updateRenderState function.
+			;(this as any)._updateRenderState(XRRenderStateInit)
+			return
+		}
 
 		let layerRenderStateInit = Object.assign({}, XRRenderStateInit)
 		delete layerRenderStateInit.layers
@@ -333,7 +339,7 @@ export class XRSessionWithLayer {
 		this.isPolyfillActive = true
 
 		// add the internal layer as the base layer
-		return (this as any)._updateRenderState({
+		;(this as any)._updateRenderState({
 			...layerRenderStateInit,
 			baseLayer: this.internalLayer,
 		})
@@ -382,7 +388,7 @@ export class XRSessionWithLayer {
 
 	get renderState() {
 		if (!this.activeRenderState) {
-			return Object.assign({}, (this as any)._renderState, { layers: [] })
+			this.createActiveRenderState()
 		}
 		return this.activeRenderState
 	}
@@ -424,5 +430,20 @@ export class XRSessionWithLayer {
 		this.context = context
 		this.tempFramebuffer = context.createFramebuffer()
 		this.renderers = new WeakMap()
+	}
+
+	protected createActiveRenderState() {
+		// this code ensures that we return an object that follows the interface for XRRenderState
+		// with the layers array added, regardless of whether we're on device or in emulator
+		// since sometimes XRRenderState is a native object, and other times it's a symbol, and
+		// other times defined as a plain JS object.
+		const _global = getGlobal()
+		let prototypeNames = Object.getOwnPropertyNames(_global.XRRenderState.prototype)
+		const renderStateClone: any = {}
+		for (let item of prototypeNames) {
+			renderStateClone[item] = (this as any)._renderState[item]
+		}
+		renderStateClone.layers = []
+		this.activeRenderState = renderStateClone
 	}
 }
