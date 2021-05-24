@@ -147,6 +147,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
 
 	_renderInternal() {
 		let gl = this.gl
+		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 		this.vaoGl.bindVertexArray(this.vao)
 
@@ -157,6 +158,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
 		gl.drawArrays(primitiveType, offset, count)
 
 		this.vaoGl.bindVertexArray(null)
+		gl.useProgram(existingProgram)
 	}
 
 	// this is used only for stereo-left-right and stereo-top-bottom layers, and is used to render
@@ -168,7 +170,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
 		let gl = this.gl
 		this.vaoGl.bindVertexArray(this.vao)
 
-		// Tell it to use our program (pair of shaders)
+		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 
 		// set position array and texture array
@@ -182,6 +184,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
 		gl.drawArrays(primitiveType, offset, count)
 
 		this.vaoGl.bindVertexArray(null)
+		gl.useProgram(existingProgram)
 	}
 
 	_createVAOs() {
@@ -440,6 +443,7 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer implements Layer
 
 	_renderInternal(layer: number = 0) {
 		let gl = this.gl
+		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 		gl.bindVertexArray(this.vao)
 
@@ -451,6 +455,7 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer implements Layer
 		var count = 6
 		gl.drawArrays(primitiveType, offset, count)
 		gl.bindVertexArray(null)
+		gl.useProgram(existingProgram)
 	}
 }
 

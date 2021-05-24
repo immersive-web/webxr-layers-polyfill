@@ -181,7 +181,8 @@ export class CubeRenderer implements LayerRenderer {
 	_poseOrientationMatrix: mat4
 	_renderInternal(orientation: DOMPointReadOnly, view: XRView) {
 		let gl = this.gl
-		// Tell it to use our program (pair of shaders)
+		
+		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 		this.vaoGl.bindVertexArray(this.vao)
 
@@ -222,6 +223,7 @@ export class CubeRenderer implements LayerRenderer {
 		var count = this.positionPoints.length / 3
 		gl.drawArrays(primitiveType, offset, count)
 		this.vaoGl.bindVertexArray(null)
+		gl.useProgram(existingProgram)
 	}
 
 	_recalculateVertices() {
