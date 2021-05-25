@@ -178,6 +178,9 @@ export default class XRCubeLayer extends XRCompositionLayerPolyfill {
 			if (internalFormat === this.context.DEPTH_COMPONENT) {
 				internalFormat = this.context.DEPTH_COMPONENT24
 			}
+			if (internalFormat === this.context.DEPTH_STENCIL) {
+				internalFormat = this.context.DEPTH24_STENCIL8
+			}
 		}
 
 		// initialize size for all the sides of the cubemap

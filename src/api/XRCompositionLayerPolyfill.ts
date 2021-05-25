@@ -448,18 +448,38 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 		let internalFormat = textureFormat
 		if (this.context instanceof WebGL2RenderingContext) {
 			if (internalFormat === this.context.DEPTH_COMPONENT) {
-				internalFormat = this.context.DEPTH_COMPONENT16
+				internalFormat = this.context.DEPTH_COMPONENT24
+			}
+			if (internalFormat === this.context.DEPTH_STENCIL) {
+				internalFormat = this.context.DEPTH24_STENCIL8
 			}
 		}
 
+		// calculate the texture's image type
 		// For depth components, UNSIGNED_BYTE is not a valid image type
 		// we need to use UNSIGNED_INT instead.
 		let texImageType = this.context.UNSIGNED_BYTE
-		if (
-			textureFormat === this.context.DEPTH_COMPONENT ||
-			textureFormat === this.context.DEPTH_COMPONENT16
-		) {
+		if (textureFormat === this.context.DEPTH_COMPONENT) {
 			texImageType = this.context.UNSIGNED_INT
+		}
+
+		if (this.context instanceof WebGL2RenderingContext) {
+			if (textureFormat === this.context.DEPTH_COMPONENT24) {
+				texImageType = this.context.UNSIGNED_INT
+			}
+			if (
+				textureFormat === this.context.DEPTH24_STENCIL8 ||
+				textureFormat === this.context.DEPTH_STENCIL
+			) {
+				texImageType = this.context.UNSIGNED_INT_24_8
+			}
+		} else {
+			// WebGL1 specific code
+			if (textureFormat === this.context.DEPTH_STENCIL) {
+				// this only exists if we have the WEBGL_depth_texture extension, but
+				// we assume that we must have it in order to get this far.
+				texImageType = (this.context as any).UNSIGNED_INT_24_8_WEBGL
+			}
 		}
 
 		if (
@@ -474,11 +494,7 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 				this.context.TEXTURE_BINDING_2D_ARRAY
 			)
 			this.context.bindTexture(this.context.TEXTURE_2D_ARRAY, texture)
-			if (
-				textureFormat === this.context.DEPTH_COMPONENT ||
-				textureFormat === this.context.DEPTH_COMPONENT16 ||
-				textureFormat === this.context.DEPTH_COMPONENT24
-			) {
+			if (this._getSupportedDepthFormats().indexOf(textureFormat) >= 0) {
 				this.context.texStorage3D(
 					this.context.TEXTURE_2D_ARRAY,
 					1,
