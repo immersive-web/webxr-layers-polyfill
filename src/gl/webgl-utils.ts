@@ -113,9 +113,9 @@ export const applyVAOExtension = (gl: XRWebGLRenderingContext): VAOFunctions => 
 	}
 
 	return {
-		bindVertexArray: ext.bindVertexArrayOES,
-		createVertexArray: ext.createVertexArrayOES,
-		deleteVertexArray: ext.deleteVertexArrayOES,
-		isVertexArray: ext.isVertexArrayOES,
+		bindVertexArray: ext.bindVertexArrayOES.bind(ext),
+		createVertexArray: ext.createVertexArrayOES.bind(ext),
+		deleteVertexArray: ext.deleteVertexArrayOES.bind(ext),
+		isVertexArray: ext.isVertexArrayOES.bind(ext),
 	}
 }
