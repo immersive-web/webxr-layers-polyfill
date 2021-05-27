@@ -1,7 +1,7 @@
 /**
  * @license
  * webxr-layers-polyfill
- * Version 1.0.0
+ * Version 1.0.1
  * Copyright (c) 2021 Facebook, Inc. and its affiliates.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -266,30 +266,48 @@ class XRCompositionLayerPolyfill {
         let internalFormat = textureFormat;
         if (this.context instanceof WebGL2RenderingContext) {
             if (internalFormat === this.context.DEPTH_COMPONENT) {
-                internalFormat = this.context.DEPTH_COMPONENT16;
+                internalFormat = this.context.DEPTH_COMPONENT24;
+            }
+            if (internalFormat === this.context.DEPTH_STENCIL) {
+                internalFormat = this.context.DEPTH24_STENCIL8;
             }
         }
         let texImageType = this.context.UNSIGNED_BYTE;
-        if (textureFormat === this.context.DEPTH_COMPONENT ||
-            textureFormat === this.context.DEPTH_COMPONENT16) {
+        if (textureFormat === this.context.DEPTH_COMPONENT) {
             texImageType = this.context.UNSIGNED_INT;
+        }
+        if (this.context instanceof WebGL2RenderingContext) {
+            if (textureFormat === this.context.DEPTH_COMPONENT24) {
+                texImageType = this.context.UNSIGNED_INT;
+            }
+            if (textureFormat === this.context.DEPTH24_STENCIL8 ||
+                textureFormat === this.context.DEPTH_STENCIL) {
+                texImageType = this.context.UNSIGNED_INT_24_8;
+            }
+        }
+        else {
+            if (textureFormat === this.context.DEPTH_STENCIL) {
+                texImageType = this.context.UNSIGNED_INT_24_8_WEBGL;
+            }
         }
         if (textureType === XRTextureType['texture-array'] &&
             this.context instanceof WebGL2RenderingContext) {
             console.warn('texture-array layers are supported...questionably in the polyfill at the moment. Use at your own risk.');
+            const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_2D_ARRAY);
             this.context.bindTexture(this.context.TEXTURE_2D_ARRAY, texture);
-            if (textureFormat === this.context.DEPTH_COMPONENT ||
-                textureFormat === this.context.DEPTH_COMPONENT16 ||
-                textureFormat === this.context.DEPTH_COMPONENT24) {
+            if (this._getSupportedDepthFormats().indexOf(textureFormat) >= 0) {
                 this.context.texStorage3D(this.context.TEXTURE_2D_ARRAY, 1, internalFormat, width, height, numLayers);
             }
             else {
                 this.context.texImage3D(this.context.TEXTURE_2D_ARRAY, 0, internalFormat, width, height, numLayers, 0, textureFormat, texImageType, null);
             }
+            this.context.bindTexture(this.context.TEXTURE_2D_ARRAY, existingTextureBinding);
         }
         else {
+            const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_2D);
             this.context.bindTexture(this.context.TEXTURE_2D, texture);
             this.context.texImage2D(this.context.TEXTURE_2D, 0, internalFormat, width, height, 0, textureFormat, texImageType, null);
+            this.context.bindTexture(this.context.TEXTURE_2D, existingTextureBinding);
         }
         return textureMeta;
     }
@@ -895,10 +913,10 @@ const applyVAOExtension = (gl) => {
         throw new Error('Cannot use VAOs.');
     }
     return {
-        bindVertexArray: ext.bindVertexArrayOES,
-        createVertexArray: ext.createVertexArrayOES,
-        deleteVertexArray: ext.deleteVertexArrayOES,
-        isVertexArray: ext.isVertexArrayOES,
+        bindVertexArray: ext.bindVertexArrayOES.bind(ext),
+        createVertexArray: ext.createVertexArrayOES.bind(ext),
+        deleteVertexArray: ext.deleteVertexArrayOES.bind(ext),
+        isVertexArray: ext.isVertexArrayOES.bind(ext),
     };
 };
 
@@ -958,6 +976,7 @@ class ProjectionRenderer {
         let baseLayer = session.getBaseLayer();
         gl.viewport(0, 0, baseLayer.framebufferWidth, baseLayer.framebufferHeight);
         const textureType = this.layer.getTextureType();
+        const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D);
         if (textureType === XRTextureType.texture) {
             gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0]);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -965,8 +984,9 @@ class ProjectionRenderer {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         }
-        else if (gl instanceof WebGL2RenderingContext) {
-            gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0]);
+        else {
+            throw new Error(`Created a texture projection renderer instead of a texture-array projection renderer for a texture-array layer. 
+This is probably an error with the polyfill itself; please file an issue on Github if you run into this.`);
         }
         for (let view of session.internalViews) {
             let viewport = baseLayer.getViewport(view);
@@ -978,9 +998,11 @@ class ProjectionRenderer {
                 this._renderInternal();
             }
         }
+        gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
     }
     _renderInternal() {
         let gl = this.gl;
+        const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM);
         gl.useProgram(this.program);
         this.vaoGl.bindVertexArray(this.vao);
         var primitiveType = gl.TRIANGLES;
@@ -988,6 +1010,7 @@ class ProjectionRenderer {
         var count = 6;
         gl.drawArrays(primitiveType, offset, count);
         this.vaoGl.bindVertexArray(null);
+        gl.useProgram(existingProgram);
     }
     _renderInternalStereo(view) {
         if (view.eye === 'none') {
@@ -995,6 +1018,7 @@ class ProjectionRenderer {
         }
         let gl = this.gl;
         this.vaoGl.bindVertexArray(this.vao);
+        const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM);
         gl.useProgram(this.program);
         this._setStereoTextureBuffer(view.eye === 'right' ? 1 : 0);
         var primitiveType = gl.TRIANGLES;
@@ -1002,6 +1026,7 @@ class ProjectionRenderer {
         var count = 6;
         gl.drawArrays(primitiveType, offset, count);
         this.vaoGl.bindVertexArray(null);
+        gl.useProgram(existingProgram);
     }
     _createVAOs() {
         this._createTextureUVs();
@@ -1025,6 +1050,7 @@ class ProjectionRenderer {
         gl.bufferData(gl.ARRAY_BUFFER, this.texturePoints, gl.DYNAMIC_DRAW);
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_texCoord, size, type, normalize, stride, offset);
         this.vaoGl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
     _setStereoTextureBuffer(index) {
         let gl = this.gl;
@@ -1037,6 +1063,7 @@ class ProjectionRenderer {
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_texCoord, size, type, normalize, stride, offset);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
     _createTextureUVs() {
         this.texturePoints = new Float32Array([
@@ -1150,6 +1177,7 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer {
             throw new Error('Using texture array projection renderer on a layer without texture array.');
         }
         let baseLayer = session.getBaseLayer();
+        const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY);
         gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0]);
         gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -1159,9 +1187,11 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer {
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
             this._renderInternal(index);
         }
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding);
     }
     _renderInternal(layer = 0) {
         let gl = this.gl;
+        const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM);
         gl.useProgram(this.program);
         gl.bindVertexArray(this.vao);
         gl.uniform1i(this.u_layerInfo, layer);
@@ -1170,6 +1200,7 @@ class ProjectionTextureArrayRenderer extends ProjectionRenderer {
         var count = 6;
         gl.drawArrays(primitiveType, offset, count);
         gl.bindVertexArray(null);
+        gl.useProgram(existingProgram);
     }
 }
 const createProjectionRenderer = (layer, context) => {
@@ -1447,9 +1478,10 @@ class CompositionLayerRenderer {
                 height: this.layer.media.videoHeight,
                 type: XRTextureType.texture,
             };
+            const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D);
             gl.bindTexture(gl.TEXTURE_2D, this.mediaTexture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.layer.media.videoWidth, this.layer.media.videoHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.bindTexture(gl.TEXTURE_2D, null);
+            gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
         }
         this._createVAOs();
     }
@@ -1468,6 +1500,7 @@ class CompositionLayerRenderer {
                 if (this.layer.isMediaLayer()) {
                     throw new Error('This should never happen. Media layers should never be created with texture-array');
                 }
+                const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY);
                 gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0]);
                 gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -1485,8 +1518,10 @@ class CompositionLayerRenderer {
                 else {
                     this._renderInternal(session, frame, view, layer);
                 }
+                gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding);
             }
             else {
+                const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D);
                 if (this.layer.isMediaLayer()) {
                     gl.bindTexture(gl.TEXTURE_2D, this.mediaTexture);
                     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -1514,6 +1549,7 @@ class CompositionLayerRenderer {
                 else {
                     this._renderInternal(session, frame, view);
                 }
+                gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
             }
         }
     }
@@ -1560,6 +1596,7 @@ class CompositionLayerRenderer {
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_texCoord, size, type, normalize, stride, offset);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
     _recalculateVertices() {
         this.positionPoints = this.createPositionPoints();
@@ -1613,9 +1650,11 @@ class CompositionLayerRenderer {
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_texCoord, size, type, normalize, stride, offset);
         this.vaoGl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
     _renderInternal(session, frame, view, layer) {
         let gl = this.gl;
+        const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM);
         gl.useProgram(this.program);
         this.vaoGl.bindVertexArray(this.vao);
         if (this.usesTextureArrayShaders) {
@@ -1629,6 +1668,7 @@ class CompositionLayerRenderer {
         var count = this.positionPoints.length / 3;
         gl.drawArrays(primitiveType, offset, count);
         this.vaoGl.bindVertexArray(null);
+        gl.useProgram(existingProgram);
     }
     _renderInternalStereo(session, frame, view, layer) {
         if (view.eye === 'none') {
@@ -1636,6 +1676,7 @@ class CompositionLayerRenderer {
         }
         let gl = this.gl;
         this.vaoGl.bindVertexArray(this.vao);
+        const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM);
         gl.useProgram(this.program);
         this._setStereoTextureBuffer(view.eye === 'right' ? 1 : 0);
         if (this.usesTextureArrayShaders) {
@@ -1649,6 +1690,7 @@ class CompositionLayerRenderer {
         var count = this.positionPoints.length / 3;
         gl.drawArrays(primitiveType, offset, count);
         this.vaoGl.bindVertexArray(null);
+        gl.useProgram(existingProgram);
     }
     _setTransformMatrix(session, frame, view) {
         let objPose = frame.getPose(this.layer.space, session.getReferenceSpace());
@@ -1905,10 +1947,12 @@ class XRCubeLayer extends XRCompositionLayerPolyfill {
             textureFormat: this.init.colorFormat,
             texture,
         };
+        const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_CUBE_MAP);
         this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, texture);
         for (let i = 0; i < 6; i++) {
             this.context.texImage2D(this.context.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, textureMeta.textureFormat, textureMeta.width, textureMeta.height, 0, textureMeta.textureFormat, this.context.UNSIGNED_BYTE, null);
         }
+        this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, existingTextureBinding);
         return textureMeta;
     }
     _createCubeDepthTexture() {
@@ -1921,16 +1965,21 @@ class XRCubeLayer extends XRCompositionLayerPolyfill {
             textureFormat: this.init.depthFormat,
             texture,
         };
+        const existingTextureBinding = this.context.getParameter(this.context.TEXTURE_BINDING_CUBE_MAP);
         this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, texture);
         let internalFormat = this.init.depthFormat;
         if (this.context instanceof WebGL2RenderingContext) {
             if (internalFormat === this.context.DEPTH_COMPONENT) {
                 internalFormat = this.context.DEPTH_COMPONENT24;
             }
+            if (internalFormat === this.context.DEPTH_STENCIL) {
+                internalFormat = this.context.DEPTH24_STENCIL8;
+            }
         }
         for (let i = 0; i < 6; i++) {
             this.context.texImage2D(this.context.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, textureMeta.width, textureMeta.height, 0, textureMeta.textureFormat, this.context.UNSIGNED_INT, null);
         }
+        this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, existingTextureBinding);
         return textureMeta;
     }
     getTextureType() {
@@ -1978,6 +2027,7 @@ class CubeRenderer {
                 u_projectionMatrix: gl.getUniformLocation(this.program, 'u_projectionMatrix'),
             },
         };
+        this._createVAOs();
     }
     render(session, frame) {
         let gl = this.gl;
@@ -1987,6 +2037,7 @@ class CubeRenderer {
             let viewport = baseLayer.getViewport(view);
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
             gl.activeTexture(gl.TEXTURE0);
+            const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_CUBE_MAP);
             if (this.layer.layout === XRLayerLayout.stereo) {
                 const index = view.eye === 'right' ? 1 : 0;
                 gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.layer.colorTextures[index]);
@@ -1997,6 +2048,7 @@ class CubeRenderer {
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             this._renderInternal(this.layer.orientation, view);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding);
         }
     }
     createPositionPoints() {
@@ -2043,12 +2095,9 @@ class CubeRenderer {
     }
     _renderInternal(orientation, view) {
         let gl = this.gl;
-        if (!this.positionBuffer) {
-            this._initBuffers();
-            this._setBuffers(true);
-        }
+        const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM);
         gl.useProgram(this.program);
-        this._setBuffers();
+        this.vaoGl.bindVertexArray(this.vao);
         fromQuat(this.transformMatrix, [
             orientation.x,
             orientation.y,
@@ -2072,31 +2121,31 @@ class CubeRenderer {
         var offset = 0;
         var count = this.positionPoints.length / 3;
         gl.drawArrays(primitiveType, offset, count);
-    }
-    _initBuffers() {
-        let gl = this.gl;
-        this.positionBuffer = gl.createBuffer();
+        this.vaoGl.bindVertexArray(null);
+        gl.useProgram(existingProgram);
     }
     _recalculateVertices() {
         this.positionPoints = this.createPositionPoints();
     }
-    _setBuffers(shouldResetData) {
-        if (shouldResetData) {
-            this._recalculateVertices();
-        }
+    _createVAOs() {
+        this._recalculateVertices();
         let gl = this.gl;
+        this.vaoGl = applyVAOExtension(gl);
+        let positionBuffer = gl.createBuffer();
+        this.vao = this.vaoGl.createVertexArray();
+        this.vaoGl.bindVertexArray(this.vao);
         gl.enableVertexAttribArray(this.programInfo.attribLocations.a_position);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-        if (shouldResetData) {
-            const positions = this.positionPoints;
-            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        const positions = this.positionPoints;
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
         var size = 3;
         var type = gl.FLOAT;
         var normalize = false;
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_position, size, type, normalize, stride, offset);
+        this.vaoGl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
 }
 
@@ -2125,6 +2174,8 @@ class XRSessionWithLayer {
                         this.tempFramebuffer = gl.createFramebuffer();
                     }
                     gl.bindFramebuffer(gl.FRAMEBUFFER, this.tempFramebuffer);
+                    const existingClearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE);
+                    gl.clearColor(0, 0, 0, 0);
                     for (let layer of this.layers) {
                         if (!(layer instanceof XRProjectionLayer)) {
                             continue;
@@ -2146,6 +2197,7 @@ class XRSessionWithLayer {
                     }
                     gl.bindFramebuffer(gl.FRAMEBUFFER, this.getBaseLayer().framebuffer);
                     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                    gl.clearColor(existingClearColor[0], existingClearColor[1], existingClearColor[2], existingClearColor[3]);
                 }
                 animationFrameCallback(time, frame);
                 if (this.isPolyfillActive && this.initializedViews) {
@@ -2155,6 +2207,11 @@ class XRSessionWithLayer {
                     gl.bindFramebuffer(gl.FRAMEBUFFER, this.getBaseLayer().framebuffer);
                     gl.enable(gl.BLEND);
                     gl.disable(gl.DEPTH_TEST);
+                    gl.disable(gl.CULL_FACE);
+                    let prevBlendSrcRGB = gl.getParameter(gl.BLEND_SRC_RGB);
+                    let prevBlendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA);
+                    let prevBlendDestRGB = gl.getParameter(gl.BLEND_DST_RGB);
+                    let prevBlendDestAlpha = gl.getParameter(gl.BLEND_DST_ALPHA);
                     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
                     for (let layer of this.layers) {
                         if (!this.renderers) {
@@ -2219,6 +2276,7 @@ class XRSessionWithLayer {
                     if (prevCullFace) {
                         gl.enable(gl.CULL_FACE);
                     }
+                    gl.blendFuncSeparate(prevBlendSrcRGB, prevBlendDestRGB, prevBlendSrcAlpha, prevBlendDestAlpha);
                     while (this.taskQueue.length > 0) {
                         const task = this.taskQueue.shift();
                         task();
@@ -2230,11 +2288,15 @@ class XRSessionWithLayer {
     }
     updateRenderState(XRRenderStateInit) {
         this.existingBaseLayer = XRRenderStateInit.baseLayer;
-        if (!XRRenderStateInit.layers) {
-            return this._updateRenderState(XRRenderStateInit);
-        }
         this.layers = XRRenderStateInit.layers || [];
-        this.activeRenderState = XRRenderStateInit;
+        if (!this.activeRenderState) {
+            this.createActiveRenderState();
+        }
+        this.activeRenderState = Object.assign(Object.assign({}, this.activeRenderState), XRRenderStateInit);
+        if (!XRRenderStateInit.layers) {
+            this._updateRenderState(XRRenderStateInit);
+            return;
+        }
         let layerRenderStateInit = Object.assign({}, XRRenderStateInit);
         delete layerRenderStateInit.layers;
         let context = undefined;
@@ -2264,7 +2326,7 @@ class XRSessionWithLayer {
         }
         this.createInternalLayer(context);
         this.isPolyfillActive = true;
-        return this._updateRenderState(Object.assign(Object.assign({}, layerRenderStateInit), { baseLayer: this.internalLayer }));
+        this._updateRenderState(Object.assign(Object.assign({}, layerRenderStateInit), { baseLayer: this.internalLayer }));
     }
     initializeSession(mode) {
         this.mode = mode;
@@ -2296,7 +2358,7 @@ class XRSessionWithLayer {
     }
     get renderState() {
         if (!this.activeRenderState) {
-            return this._renderState;
+            this.createActiveRenderState();
         }
         return this.activeRenderState;
     }
@@ -2329,6 +2391,16 @@ class XRSessionWithLayer {
         this.context = context;
         this.tempFramebuffer = context.createFramebuffer();
         this.renderers = new WeakMap();
+    }
+    createActiveRenderState() {
+        const _global = getGlobal();
+        let prototypeNames = Object.getOwnPropertyNames(_global.XRRenderState.prototype);
+        const renderStateClone = {};
+        for (let item of prototypeNames) {
+            renderStateClone[item] = this._renderState[item];
+        }
+        renderStateClone.layers = [];
+        this.activeRenderState = renderStateClone;
     }
 }
 
