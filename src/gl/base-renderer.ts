@@ -445,6 +445,16 @@ export class CompositionLayerRenderer {
 					viewport
 				)
 
+				// the texture is expected to be flipped on the y axis, which for top-down stereo causes
+				// left-right eye positions to be flipped too. So we fix that by switching the eye location
+				// in the texture
+				if (this.layer.layout === XRLayerLayout['stereo-top-bottom']) {
+					;[this.stereoTexturePoints[0], this.stereoTexturePoints[1]] = [
+						this.stereoTexturePoints[1],
+						this.stereoTexturePoints[0],
+					]
+				}
+
 				return
 			}
 
@@ -461,6 +471,16 @@ export class CompositionLayerRenderer {
 				this.texturePoints,
 				viewport
 			)
+			
+			// the texture is expected to be flipped on the y axis, which for top-down stereo causes
+			// left-right eye positions to be flipped too. So we fix that by switching the eye location
+			// in the texture
+			if (this.layer.layout === XRLayerLayout['stereo-top-bottom']) {
+				;[this.stereoTexturePoints[0], this.stereoTexturePoints[1]] = [
+					this.stereoTexturePoints[1],
+					this.stereoTexturePoints[0],
+				]
+			}
 		}
 	}
 
