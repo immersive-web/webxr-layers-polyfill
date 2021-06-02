@@ -1,6 +1,6 @@
 {
 	"name": "webxr-layers-polyfill",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "",
 	"main": "build/webxr-layers-polyfill.js",
 	"module": "build/webxr-layers-polyfill.module.js",

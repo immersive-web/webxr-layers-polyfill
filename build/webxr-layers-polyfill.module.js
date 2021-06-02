@@ -1,7 +1,7 @@
 /**
  * @license
  * webxr-layers-polyfill
- * Version 1.0.1
+ * Version 1.0.2
  * Copyright (c) 2021 Facebook, Inc. and its affiliates.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1614,12 +1614,24 @@ class CompositionLayerRenderer {
                 this.stereoTexturePoints[0] = this._offsetTextureUVsByRect(this.mediaTexturePolyfill, this.texturePoints, viewport);
                 initializeViewport(viewport, this.mediaTexturePolyfill, this.layer.layout, 1, 2);
                 this.stereoTexturePoints[1] = this._offsetTextureUVsByRect(this.mediaTexturePolyfill, this.texturePoints, viewport);
+                if (this.layer.layout === XRLayerLayout['stereo-top-bottom']) {
+                    [this.stereoTexturePoints[0], this.stereoTexturePoints[1]] = [
+                        this.stereoTexturePoints[1],
+                        this.stereoTexturePoints[0],
+                    ];
+                }
                 return;
             }
             initializeViewport(viewport, this.layer.colorTexturesMeta[0], this.layer.layout, 0, 2);
             this.stereoTexturePoints[0] = this._offsetTextureUVsByRect(this.layer.colorTexturesMeta[0], this.texturePoints, viewport);
             initializeViewport(viewport, this.layer.colorTexturesMeta[0], this.layer.layout, 1, 2);
             this.stereoTexturePoints[1] = this._offsetTextureUVsByRect(this.layer.colorTexturesMeta[0], this.texturePoints, viewport);
+            if (this.layer.layout === XRLayerLayout['stereo-top-bottom']) {
+                [this.stereoTexturePoints[0], this.stereoTexturePoints[1]] = [
+                    this.stereoTexturePoints[1],
+                    this.stereoTexturePoints[0],
+                ];
+            }
         }
     }
     _createVAOs() {
