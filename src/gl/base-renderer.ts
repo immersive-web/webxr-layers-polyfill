@@ -123,6 +123,11 @@ export interface LayerRenderer {
 	render(session: XRSessionWithLayer, frame?: XRFrame)
 }
 
+export interface VaoState {
+	vao: WebGLVertexArrayObject | WebGLVertexArrayObjectOES;
+	arrayBuffer: WebGLBuffer;
+}
+
 type FlatLayer = XRQuadLayer | XRCylinderLayer | XREquirectLayer
 
 // used for everything except Projection and Cube layers
@@ -151,6 +156,8 @@ export class CompositionLayerRenderer {
 	// custom texture for media layers
 	protected mediaTexturePolyfill: PolyfillTexture
 	protected mediaTexture: WebGLTexture
+
+	private savedVaoState: VaoState = { vao: null, arrayBuffer: null }
 
 	constructor(layer: FlatLayer, context: XRWebGLRenderingContext) {
 		this.gl = context
@@ -189,6 +196,18 @@ export class CompositionLayerRenderer {
 		if (this.usesTextureArrayShaders) {
 			this.programInfo.uniformLocations.u_layer = gl.getUniformLocation(this.program, 'u_layer')
 		}
+	}
+
+	saveVaoState() {
+		this.savedVaoState.vao = this.gl.getParameter(this.vaoGl.VERTEX_ARRAY_BINDING)
+		this.savedVaoState.arrayBuffer = this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING)
+	}
+
+	restoreVaoState() {
+		this.vaoGl.bindVertexArray(this.savedVaoState.vao)
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer)
+
+		this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
 	}
 
 	/**
@@ -232,12 +251,16 @@ export class CompositionLayerRenderer {
 	}
 
 	render(session: XRSessionWithLayer, frame: XRFrame) {
+		this.saveVaoState()
+
 		let gl = this.gl
 		// set viewport
 		// we already rendered the views into the layer's color textures
 		// so we can just render them all into the baselayer
 		let baseLayer = session.getBaseLayer()
 		let basePose = frame.getViewerPose(session.getReferenceSpace())
+
+		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
 
 		for (let view of basePose.views) {
 			let viewport = baseLayer.getViewport(view)
@@ -279,6 +302,7 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view, layer)
 				}
+				gl.activeTexture(existingActiveTexture);
 				gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding)
 			} else {
 				const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D)
@@ -325,9 +349,12 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view)
 				}
+				gl.activeTexture(existingActiveTexture);
 				gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding)
 			}
 		}
+
+		this.restoreVaoState()
 	}
 
 	// override this to set position values!
@@ -491,6 +518,9 @@ export class CompositionLayerRenderer {
 		// makes sure that VAOs are usable on both WebGL1 and WebGL2
 		this.vaoGl = applyVAOExtension(gl)
 
+		// push vao existing vao state
+		this.saveVaoState()
+
 		// position
 		let positionBuffer = gl.createBuffer()
 		this.vao = this.vaoGl.createVertexArray()
@@ -544,8 +574,8 @@ export class CompositionLayerRenderer {
 			offset
 		)
 
-		this.vaoGl.bindVertexArray(null)
-		gl.bindBuffer(gl.ARRAY_BUFFER, null)
+		// pop vao state
+		this.restoreVaoState()
 	}
 
 	// RENDERING
