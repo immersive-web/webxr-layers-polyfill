@@ -453,6 +453,14 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 			if (internalFormat === this.context.DEPTH_STENCIL) {
 				internalFormat = this.context.DEPTH24_STENCIL8
 			}
+			// SRGB and SRGB8_ALPHA8 not valid component for texture format
+			// https://www.khronos.org/registry/webgl/specs/latest/2.0/#TEXTURE_TYPES_FORMATS_FROM_DOM_ELEMENTS_TABLE
+			if (internalFormat === this.context.SRGB) {
+				textureFormat = this.context.RGB;
+			}
+			if (internalFormat === this.context.SRGB8_ALPHA8) {
+				textureFormat = this.context.RGBA;
+			}
 		}
 
 		// calculate the texture's image type
