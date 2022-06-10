@@ -19,8 +19,8 @@
 /**
  * @license
  * gl-matrix 
- * Version 3.3.0
- * Copyright (c) 2015-2020, Brandon Jones, Colin MacKenzie IV.
+ * Version 3.4.3
+ * Copyright (c) 2015-2021, Brandon Jones, Colin MacKenzie IV.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -913,6 +913,7 @@ const applyVAOExtension = (gl) => {
         throw new Error('Cannot use VAOs.');
     }
     return {
+        VERTEX_ARRAY_BINDING: ext.VERTEX_ARRAY_BINDING_OES,
         bindVertexArray: ext.bindVertexArrayOES.bind(ext),
         createVertexArray: ext.createVertexArrayOES.bind(ext),
         deleteVertexArray: ext.deleteVertexArrayOES.bind(ext),
@@ -920,8 +921,8 @@ const applyVAOExtension = (gl) => {
     };
 };
 
-const glsl = (x) => x;
-const vertexShader = glsl `
+const glsl$2 = (x) => x;
+const vertexShader$2 = glsl$2 `
 attribute vec2 a_position;
 attribute vec2 a_texCoord;
 
@@ -944,7 +945,7 @@ void main() {
    v_texCoord = a_texCoord;
 }
 `;
-const fragmentShader = glsl `
+const fragmentShader$2 = glsl$2 `
 precision mediump float;
 
 // our texture
@@ -962,7 +963,7 @@ class ProjectionRenderer {
     constructor(layer, context) {
         this.gl = context;
         this.layer = layer;
-        this.program = createProgram(this.gl, vertexShader, fragmentShader);
+        this.program = createProgram(this.gl, vertexShader$2, fragmentShader$2);
         this.programInfo = {
             attribLocations: {
                 a_position: this.gl.getAttribLocation(this.program, 'a_position'),
@@ -977,7 +978,9 @@ class ProjectionRenderer {
         gl.viewport(0, 0, baseLayer.framebufferWidth, baseLayer.framebufferHeight);
         const textureType = this.layer.getTextureType();
         const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D);
+        const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
         if (textureType === XRTextureType.texture) {
+            gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0]);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -998,6 +1001,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
                 this._renderInternal();
             }
         }
+        gl.activeTexture(existingActiveTexture);
         gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
     }
     _renderInternal() {
@@ -1121,7 +1125,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
             this.layer.layout === XRLayerLayout['stereo-top-bottom']);
     }
 }
-const texArrayVertexShader = glsl `#version 300 es
+const texArrayVertexShader$1 = glsl$2 `#version 300 es
 
 in vec2 a_position;
 in vec2 a_texCoord;
@@ -1145,7 +1149,7 @@ void main() {
 	v_texCoord = a_texCoord;
 }
 `;
-const texArrayFragmentShader = glsl `#version 300 es
+const texArrayFragmentShader$1 = glsl$2 `#version 300 es
 precision mediump float;
 precision mediump int;
 precision mediump sampler2DArray;
@@ -1166,7 +1170,7 @@ void main() {
 class ProjectionTextureArrayRenderer extends ProjectionRenderer {
     constructor(layer, context) {
         super(layer, context);
-        this.program = createProgram(this.gl, texArrayVertexShader, texArrayFragmentShader);
+        this.program = createProgram(this.gl, texArrayVertexShader$1, texArrayFragmentShader$1);
         this._createVAOs();
         this.u_layerInfo = this.gl.getUniformLocation(this.program, 'u_layer');
     }
@@ -1222,7 +1226,7 @@ if (!Math.hypot) Math.hypot = function () {
   return Math.sqrt(y);
 };
 
-function create() {
+function create$1() {
   var out = new ARRAY_TYPE(16);
   if (ARRAY_TYPE != Float32Array) {
     out[1] = 0;
@@ -1331,7 +1335,7 @@ function fromQuat(out, q) {
   return out;
 }
 
-function create$1() {
+function create() {
   var out = new ARRAY_TYPE(2);
   if (ARRAY_TYPE != Float32Array) {
     out[0] = 0;
@@ -1340,7 +1344,7 @@ function create$1() {
   return out;
 }
 (function () {
-  var vec = create$1();
+  var vec = create();
   return function (a, stride, offset, count, fn, arg) {
     var i, l;
     if (!stride) {
@@ -1399,7 +1403,7 @@ void main() {
 	// gl_FragColor = vec4(1.0, 0, 0, 1.0);
 }
 `;
-const texArrayVertexShader$1 = glsl$1 `#version 300 es
+const texArrayVertexShader = glsl$1 `#version 300 es
 
 in vec4 a_position;
 in vec2 a_texCoord;
@@ -1418,7 +1422,7 @@ void main() {
 	v_texCoord = a_texCoord;
 }
 `;
-const texArrayFragmentShader$1 = glsl$1 `#version 300 es
+const texArrayFragmentShader = glsl$1 `#version 300 es
 precision mediump float;
 precision mediump int;
 precision mediump sampler2DArray;
@@ -1439,16 +1443,17 @@ void main() {
 class CompositionLayerRenderer {
     constructor(layer, context) {
         this.usesTextureArrayShaders = false;
+        this.savedVaoState = { vao: null, arrayBuffer: null };
         this.gl = context;
         this.layer = layer;
         let gl = this.gl;
-        this.transformMatrix = create();
+        this.transformMatrix = create$1();
         if (context instanceof WebGL2RenderingContext &&
             this.layer.getTextureType() === XRTextureType['texture-array']) {
             this.usesTextureArrayShaders = true;
         }
         if (this.usesTextureArrayShaders) {
-            this.program = createProgram(gl, texArrayVertexShader$1, texArrayFragmentShader$1);
+            this.program = createProgram(gl, texArrayVertexShader, texArrayFragmentShader);
         }
         else {
             this.program = createProgram(gl, vertexShader$1, fragmentShader$1);
@@ -1466,6 +1471,15 @@ class CompositionLayerRenderer {
         if (this.usesTextureArrayShaders) {
             this.programInfo.uniformLocations.u_layer = gl.getUniformLocation(this.program, 'u_layer');
         }
+    }
+    saveVaoState() {
+        this.savedVaoState.vao = this.gl.getParameter(this.vaoGl.VERTEX_ARRAY_BINDING);
+        this.savedVaoState.arrayBuffer = this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING);
+    }
+    restoreVaoState() {
+        this.vaoGl.bindVertexArray(this.savedVaoState.vao);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer);
+        this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
     }
     initialize() {
         let gl = this.gl;
@@ -1486,9 +1500,11 @@ class CompositionLayerRenderer {
         this._createVAOs();
     }
     render(session, frame) {
+        this.saveVaoState();
         let gl = this.gl;
         let baseLayer = session.getBaseLayer();
         let basePose = frame.getViewerPose(session.getReferenceSpace());
+        const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
         for (let view of basePose.views) {
             let viewport = baseLayer.getViewport(view);
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
@@ -1518,6 +1534,7 @@ class CompositionLayerRenderer {
                 else {
                     this._renderInternal(session, frame, view, layer);
                 }
+                gl.activeTexture(existingActiveTexture);
                 gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding);
             }
             else {
@@ -1549,9 +1566,11 @@ class CompositionLayerRenderer {
                 else {
                     this._renderInternal(session, frame, view);
                 }
+                gl.activeTexture(existingActiveTexture);
                 gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
             }
         }
+        this.restoreVaoState();
     }
     createPositionPoints() {
         return new Float32Array([]);
@@ -1638,6 +1657,7 @@ class CompositionLayerRenderer {
         this._recalculateVertices();
         let gl = this.gl;
         this.vaoGl = applyVAOExtension(gl);
+        this.saveVaoState();
         let positionBuffer = gl.createBuffer();
         this.vao = this.vaoGl.createVertexArray();
         this.vaoGl.bindVertexArray(this.vao);
@@ -1661,8 +1681,7 @@ class CompositionLayerRenderer {
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_texCoord, size, type, normalize, stride, offset);
-        this.vaoGl.bindVertexArray(null);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        this.restoreVaoState();
     }
     _renderInternal(session, frame, view, layer) {
         let gl = this.gl;
@@ -1761,12 +1780,12 @@ class CylinderRenderer extends CompositionLayerRenderer {
         const radiansPerSegment = angle / this.segments;
         const theta = Math.PI / 2 - angle / 2;
         const unitCirclePositions = [];
-        const firstUnitPoint = create$1();
+        const firstUnitPoint = create();
         firstUnitPoint[0] = radius * Math.cos(theta);
         firstUnitPoint[1] = -radius * Math.sin(theta);
         unitCirclePositions.push(firstUnitPoint);
         for (let i = 0; i < this.segments; i++) {
-            const nextPoint = create$1();
+            const nextPoint = create();
             nextPoint[0] = radius * Math.cos(theta + radiansPerSegment * (i + 1));
             nextPoint[1] = -radius * Math.sin(theta + radiansPerSegment * (i + 1));
             unitCirclePositions.push(nextPoint);
@@ -1999,8 +2018,8 @@ class XRCubeLayer extends XRCompositionLayerPolyfill {
     }
 }
 
-const glsl$2 = (x) => x;
-const vertexShader$2 = glsl$2 `
+const glsl = (x) => x;
+const vertexShader = glsl `
 attribute vec4 a_position;
 uniform mat4 u_projectionMatrix;
 uniform mat4 u_matrix;
@@ -2012,7 +2031,7 @@ void main() {
    v_normal = normalize(a_position.xyz);
 }
 `;
-const fragmentShader$2 = glsl$2 `
+const fragmentShader = glsl `
 precision mediump float;
 
 varying vec3 v_normal;
@@ -2025,10 +2044,11 @@ void main() {
 `;
 class CubeRenderer {
     constructor(layer, gl) {
+        this.savedVaoState = { vao: null, arrayBuffer: null };
         this.layer = layer;
         this.gl = gl;
-        this.transformMatrix = create();
-        this.program = createProgram(gl, vertexShader$2, fragmentShader$2);
+        this.transformMatrix = create$1();
+        this.program = createProgram(gl, vertexShader, fragmentShader);
         this.programInfo = {
             attribLocations: {
                 a_position: gl.getAttribLocation(this.program, 'a_position'),
@@ -2041,10 +2061,21 @@ class CubeRenderer {
         };
         this._createVAOs();
     }
+    saveVaoState() {
+        this.savedVaoState.vao = this.gl.getParameter(this.vaoGl.VERTEX_ARRAY_BINDING);
+        this.savedVaoState.arrayBuffer = this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING);
+    }
+    restoreVaoState() {
+        this.vaoGl.bindVertexArray(this.savedVaoState.vao);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer);
+        this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
+    }
     render(session, frame) {
+        this.saveVaoState();
         let gl = this.gl;
         let baseLayer = session.getBaseLayer();
         let basePose = frame.getViewerPose(session.getReferenceSpace());
+        const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
         for (let view of basePose.views) {
             let viewport = baseLayer.getViewport(view);
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
@@ -2060,8 +2091,10 @@ class CubeRenderer {
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             this._renderInternal(this.layer.orientation, view);
+            gl.activeTexture(existingActiveTexture);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding);
         }
+        this.restoreVaoState();
     }
     createPositionPoints() {
         const w = 0.5;
@@ -2117,7 +2150,7 @@ class CubeRenderer {
             orientation.w,
         ]);
         if (!this._poseOrientationMatrix) {
-            this._poseOrientationMatrix = create();
+            this._poseOrientationMatrix = create$1();
         }
         fromQuat(this._poseOrientationMatrix, [
             view.transform.inverse.orientation.x,
@@ -2143,6 +2176,7 @@ class CubeRenderer {
         this._recalculateVertices();
         let gl = this.gl;
         this.vaoGl = applyVAOExtension(gl);
+        this.saveVaoState();
         let positionBuffer = gl.createBuffer();
         this.vao = this.vaoGl.createVertexArray();
         this.vaoGl.bindVertexArray(this.vao);
@@ -2156,8 +2190,7 @@ class CubeRenderer {
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_position, size, type, normalize, stride, offset);
-        this.vaoGl.bindVertexArray(null);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        this.restoreVaoState();
     }
 }
 
@@ -2743,4 +2776,4 @@ class WebXRLayersPolyfill {
     }
 }
 
-export default WebXRLayersPolyfill;
+export { WebXRLayersPolyfill as default };
