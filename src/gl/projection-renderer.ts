@@ -119,10 +119,10 @@ class ProjectionRenderer implements LayerRenderer {
 
 		const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D)
 
-		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
+		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE)
 
 		if (textureType === XRTextureType.texture) {
-			gl.activeTexture(gl.TEXTURE0);
+			gl.activeTexture(gl.TEXTURE0)
 			gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0])
 
 			// Set the parameters so we can render any size image.
@@ -146,7 +146,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
 			}
 		}
 
-		gl.activeTexture(existingActiveTexture);
+		gl.activeTexture(existingActiveTexture)
 		gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding)
 	}
 

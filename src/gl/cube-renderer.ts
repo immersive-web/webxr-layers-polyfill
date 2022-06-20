@@ -111,7 +111,7 @@ export class CubeRenderer implements LayerRenderer {
 		this.vaoGl.bindVertexArray(this.savedVaoState.vao)
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer)
 
-		this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
+		this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null
 	}
 
 	public render(session: XRSessionWithLayer, frame: XRFrame) {
@@ -121,14 +121,14 @@ export class CubeRenderer implements LayerRenderer {
 		let baseLayer = session.getBaseLayer()
 		let basePose = frame.getViewerPose(session.getReferenceSpace())
 
-		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
+		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE)
 
 		for (let view of basePose.views) {
 			let viewport = baseLayer.getViewport(view)
 			gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height)
 			gl.activeTexture(gl.TEXTURE0)
 
-			const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_CUBE_MAP);
+			const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_CUBE_MAP)
 			// STEREO CASE: 0 is left eye, 1 is right eye
 			if (this.layer.layout === XRLayerLayout.stereo) {
 				const index = view.eye === 'right' ? 1 : 0
@@ -142,7 +142,7 @@ export class CubeRenderer implements LayerRenderer {
 
 			this._renderInternal(this.layer.orientation, view)
 
-			gl.activeTexture(existingActiveTexture);
+			gl.activeTexture(existingActiveTexture)
 			gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding)
 		}
 
@@ -202,7 +202,7 @@ export class CubeRenderer implements LayerRenderer {
 	_poseOrientationMatrix: mat4
 	_renderInternal(orientation: DOMPointReadOnly, view: XRView) {
 		let gl = this.gl
-		
+
 		const existingProgram = gl.getParameter(gl.CURRENT_PROGRAM)
 		gl.useProgram(this.program)
 		this.vaoGl.bindVertexArray(this.vao)

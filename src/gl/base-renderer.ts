@@ -124,8 +124,8 @@ export interface LayerRenderer {
 }
 
 export interface VaoState {
-	vao: WebGLVertexArrayObject | WebGLVertexArrayObjectOES;
-	arrayBuffer: WebGLBuffer;
+	vao: WebGLVertexArrayObject | WebGLVertexArrayObjectOES
+	arrayBuffer: WebGLBuffer
 }
 
 type FlatLayer = XRQuadLayer | XRCylinderLayer | XREquirectLayer
@@ -207,7 +207,7 @@ export class CompositionLayerRenderer {
 		this.vaoGl.bindVertexArray(this.savedVaoState.vao)
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer)
 
-		this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
+		this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null
 	}
 
 	/**
@@ -260,7 +260,7 @@ export class CompositionLayerRenderer {
 		let baseLayer = session.getBaseLayer()
 		let basePose = frame.getViewerPose(session.getReferenceSpace())
 
-		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
+		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE)
 
 		for (let view of basePose.views) {
 			let viewport = baseLayer.getViewport(view)
@@ -302,7 +302,7 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view, layer)
 				}
-				gl.activeTexture(existingActiveTexture);
+				gl.activeTexture(existingActiveTexture)
 				gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding)
 			} else {
 				const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D)
@@ -349,7 +349,7 @@ export class CompositionLayerRenderer {
 				} else {
 					this._renderInternal(session, frame, view)
 				}
-				gl.activeTexture(existingActiveTexture);
+				gl.activeTexture(existingActiveTexture)
 				gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding)
 			}
 		}
@@ -498,7 +498,7 @@ export class CompositionLayerRenderer {
 				this.texturePoints,
 				viewport
 			)
-			
+
 			// the texture is expected to be flipped on the y axis, which for top-down stereo causes
 			// left-right eye positions to be flipped too. So we fix that by switching the eye location
 			// in the texture

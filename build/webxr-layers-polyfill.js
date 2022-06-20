@@ -45,7 +45,7 @@
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
     typeof define === 'function' && define.amd ? define(factory) :
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.WebXRLayersPolyfill = factory());
-})(this, (function () { 'use strict';
+}(this, (function () { 'use strict';
 
     var XRTextureType;
     (function (XRTextureType) {
@@ -933,8 +933,8 @@
         };
     };
 
-    const glsl$2 = (x) => x;
-    const vertexShader$2 = glsl$2 `
+    const glsl = (x) => x;
+    const vertexShader = glsl `
 attribute vec2 a_position;
 attribute vec2 a_texCoord;
 
@@ -957,7 +957,7 @@ void main() {
    v_texCoord = a_texCoord;
 }
 `;
-    const fragmentShader$2 = glsl$2 `
+    const fragmentShader = glsl `
 precision mediump float;
 
 // our texture
@@ -975,7 +975,7 @@ void main() {
         constructor(layer, context) {
             this.gl = context;
             this.layer = layer;
-            this.program = createProgram(this.gl, vertexShader$2, fragmentShader$2);
+            this.program = createProgram(this.gl, vertexShader, fragmentShader);
             this.programInfo = {
                 attribLocations: {
                     a_position: this.gl.getAttribLocation(this.program, 'a_position'),
@@ -1137,7 +1137,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
                 this.layer.layout === XRLayerLayout['stereo-top-bottom']);
         }
     }
-    const texArrayVertexShader$1 = glsl$2 `#version 300 es
+    const texArrayVertexShader = glsl `#version 300 es
 
 in vec2 a_position;
 in vec2 a_texCoord;
@@ -1161,7 +1161,7 @@ void main() {
 	v_texCoord = a_texCoord;
 }
 `;
-    const texArrayFragmentShader$1 = glsl$2 `#version 300 es
+    const texArrayFragmentShader = glsl `#version 300 es
 precision mediump float;
 precision mediump int;
 precision mediump sampler2DArray;
@@ -1182,7 +1182,7 @@ void main() {
     class ProjectionTextureArrayRenderer extends ProjectionRenderer {
         constructor(layer, context) {
             super(layer, context);
-            this.program = createProgram(this.gl, texArrayVertexShader$1, texArrayFragmentShader$1);
+            this.program = createProgram(this.gl, texArrayVertexShader, texArrayFragmentShader);
             this._createVAOs();
             this.u_layerInfo = this.gl.getUniformLocation(this.program, 'u_layer');
         }
@@ -1238,7 +1238,7 @@ void main() {
       return Math.sqrt(y);
     };
 
-    function create$1() {
+    function create() {
       var out = new ARRAY_TYPE(16);
       if (ARRAY_TYPE != Float32Array) {
         out[1] = 0;
@@ -1347,7 +1347,7 @@ void main() {
       return out;
     }
 
-    function create() {
+    function create$1() {
       var out = new ARRAY_TYPE(2);
       if (ARRAY_TYPE != Float32Array) {
         out[0] = 0;
@@ -1356,7 +1356,7 @@ void main() {
       return out;
     }
     (function () {
-      var vec = create();
+      var vec = create$1();
       return function (a, stride, offset, count, fn, arg) {
         var i, l;
         if (!stride) {
@@ -1415,7 +1415,7 @@ void main() {
 	// gl_FragColor = vec4(1.0, 0, 0, 1.0);
 }
 `;
-    const texArrayVertexShader = glsl$1 `#version 300 es
+    const texArrayVertexShader$1 = glsl$1 `#version 300 es
 
 in vec4 a_position;
 in vec2 a_texCoord;
@@ -1434,7 +1434,7 @@ void main() {
 	v_texCoord = a_texCoord;
 }
 `;
-    const texArrayFragmentShader = glsl$1 `#version 300 es
+    const texArrayFragmentShader$1 = glsl$1 `#version 300 es
 precision mediump float;
 precision mediump int;
 precision mediump sampler2DArray;
@@ -1459,13 +1459,13 @@ void main() {
             this.gl = context;
             this.layer = layer;
             let gl = this.gl;
-            this.transformMatrix = create$1();
+            this.transformMatrix = create();
             if (context instanceof WebGL2RenderingContext &&
                 this.layer.getTextureType() === XRTextureType['texture-array']) {
                 this.usesTextureArrayShaders = true;
             }
             if (this.usesTextureArrayShaders) {
-                this.program = createProgram(gl, texArrayVertexShader, texArrayFragmentShader);
+                this.program = createProgram(gl, texArrayVertexShader$1, texArrayFragmentShader$1);
             }
             else {
                 this.program = createProgram(gl, vertexShader$1, fragmentShader$1);
@@ -1792,12 +1792,12 @@ void main() {
             const radiansPerSegment = angle / this.segments;
             const theta = Math.PI / 2 - angle / 2;
             const unitCirclePositions = [];
-            const firstUnitPoint = create();
+            const firstUnitPoint = create$1();
             firstUnitPoint[0] = radius * Math.cos(theta);
             firstUnitPoint[1] = -radius * Math.sin(theta);
             unitCirclePositions.push(firstUnitPoint);
             for (let i = 0; i < this.segments; i++) {
-                const nextPoint = create();
+                const nextPoint = create$1();
                 nextPoint[0] = radius * Math.cos(theta + radiansPerSegment * (i + 1));
                 nextPoint[1] = -radius * Math.sin(theta + radiansPerSegment * (i + 1));
                 unitCirclePositions.push(nextPoint);
@@ -2030,8 +2030,8 @@ void main() {
         }
     }
 
-    const glsl = (x) => x;
-    const vertexShader = glsl `
+    const glsl$2 = (x) => x;
+    const vertexShader$2 = glsl$2 `
 attribute vec4 a_position;
 uniform mat4 u_projectionMatrix;
 uniform mat4 u_matrix;
@@ -2043,7 +2043,7 @@ void main() {
    v_normal = normalize(a_position.xyz);
 }
 `;
-    const fragmentShader = glsl `
+    const fragmentShader$2 = glsl$2 `
 precision mediump float;
 
 varying vec3 v_normal;
@@ -2059,8 +2059,8 @@ void main() {
             this.savedVaoState = { vao: null, arrayBuffer: null };
             this.layer = layer;
             this.gl = gl;
-            this.transformMatrix = create$1();
-            this.program = createProgram(gl, vertexShader, fragmentShader);
+            this.transformMatrix = create();
+            this.program = createProgram(gl, vertexShader$2, fragmentShader$2);
             this.programInfo = {
                 attribLocations: {
                     a_position: gl.getAttribLocation(this.program, 'a_position'),
@@ -2162,7 +2162,7 @@ void main() {
                 orientation.w,
             ]);
             if (!this._poseOrientationMatrix) {
-                this._poseOrientationMatrix = create$1();
+                this._poseOrientationMatrix = create();
             }
             fromQuat(this._poseOrientationMatrix, [
                 view.transform.inverse.orientation.x,
@@ -2790,4 +2790,4 @@ void main() {
 
     return WebXRLayersPolyfill;
 
-}));
+})));
