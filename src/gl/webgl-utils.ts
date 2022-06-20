@@ -95,6 +95,7 @@ export const setRectangle = (
 export type VAOFunctions =
 	| WebGL2RenderingContext
 	| {
+			VERTEX_ARRAY_BINDING: GLenum;
 			bindVertexArray(arrayObject: WebGLVertexArrayObjectOES | null): void
 			createVertexArray(): WebGLVertexArrayObjectOES | null
 			deleteVertexArray(arrayObject: WebGLVertexArrayObjectOES | null): void
@@ -113,6 +114,7 @@ export const applyVAOExtension = (gl: XRWebGLRenderingContext): VAOFunctions => 
 	}
 
 	return {
+		VERTEX_ARRAY_BINDING: ext.VERTEX_ARRAY_BINDING_OES,
 		bindVertexArray: ext.bindVertexArrayOES.bind(ext),
 		createVertexArray: ext.createVertexArrayOES.bind(ext),
 		deleteVertexArray: ext.deleteVertexArrayOES.bind(ext),

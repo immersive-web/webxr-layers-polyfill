@@ -18,7 +18,7 @@ import type { XRFrame, XRView } from 'webxr'
 import XRCubeLayer from '../api/XRCubeLayer'
 import { XRSessionWithLayer } from '../api/XRSessionWithLayer'
 import { XRLayerLayout, XRWebGLRenderingContext } from '../types'
-import { LayerRenderer } from './base-renderer'
+import { LayerRenderer, VaoState } from './base-renderer'
 import { applyVAOExtension, createProgram, VAOFunctions } from './webgl-utils'
 
 // template tagging for syntax highlight
@@ -76,6 +76,8 @@ export class CubeRenderer implements LayerRenderer {
 	private programInfo: CubeProgramInfo
 	private positionPoints: Float32Array
 
+	private savedVaoState: VaoState = { vao: null, arrayBuffer: null }
+
 	constructor(layer: XRCubeLayer, gl: XRWebGLRenderingContext) {
 		this.layer = layer
 		this.gl = gl
@@ -100,17 +102,32 @@ export class CubeRenderer implements LayerRenderer {
 		this._createVAOs()
 	}
 
+	saveVaoState() {
+		this.savedVaoState.vao = this.gl.getParameter(this.vaoGl.VERTEX_ARRAY_BINDING)
+		this.savedVaoState.arrayBuffer = this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING)
+	}
+
+	restoreVaoState() {
+		this.vaoGl.bindVertexArray(this.savedVaoState.vao)
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer)
+
+		this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
+	}
+
 	public render(session: XRSessionWithLayer, frame: XRFrame) {
+		this.saveVaoState()
 		let gl = this.gl
 
 		let baseLayer = session.getBaseLayer()
 		let basePose = frame.getViewerPose(session.getReferenceSpace())
 
+		const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
+
 		for (let view of basePose.views) {
 			let viewport = baseLayer.getViewport(view)
 			gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height)
-
 			gl.activeTexture(gl.TEXTURE0)
+
 			const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_CUBE_MAP);
 			// STEREO CASE: 0 is left eye, 1 is right eye
 			if (this.layer.layout === XRLayerLayout.stereo) {
@@ -124,8 +141,12 @@ export class CubeRenderer implements LayerRenderer {
 			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 
 			this._renderInternal(this.layer.orientation, view)
+
+			gl.activeTexture(existingActiveTexture);
 			gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding)
 		}
+
+		this.restoreVaoState()
 	}
 
 	// override this to set position values!
@@ -237,6 +258,8 @@ export class CubeRenderer implements LayerRenderer {
 		// makes sure that VAOs are usable on both WebGL1 and WebGL2
 		this.vaoGl = applyVAOExtension(gl)
 
+		this.saveVaoState()
+
 		// position
 		let positionBuffer = gl.createBuffer()
 		this.vao = this.vaoGl.createVertexArray()
@@ -266,7 +289,6 @@ export class CubeRenderer implements LayerRenderer {
 			offset
 		)
 
-		this.vaoGl.bindVertexArray(null)
-		gl.bindBuffer(gl.ARRAY_BUFFER, null)
+		this.restoreVaoState()
 	}
 }

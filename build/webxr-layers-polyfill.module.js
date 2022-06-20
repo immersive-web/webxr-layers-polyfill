@@ -919,6 +919,7 @@ const applyVAOExtension = (gl) => {
         throw new Error('Cannot use VAOs.');
     }
     return {
+        VERTEX_ARRAY_BINDING: ext.VERTEX_ARRAY_BINDING_OES,
         bindVertexArray: ext.bindVertexArrayOES.bind(ext),
         createVertexArray: ext.createVertexArrayOES.bind(ext),
         deleteVertexArray: ext.deleteVertexArrayOES.bind(ext),
@@ -983,7 +984,9 @@ class ProjectionRenderer {
         gl.viewport(0, 0, baseLayer.framebufferWidth, baseLayer.framebufferHeight);
         const textureType = this.layer.getTextureType();
         const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D);
+        const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
         if (textureType === XRTextureType.texture) {
+            gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0]);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -1004,6 +1007,7 @@ This is probably an error with the polyfill itself; please file an issue on Gith
                 this._renderInternal();
             }
         }
+        gl.activeTexture(existingActiveTexture);
         gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
     }
     _renderInternal() {
@@ -1445,6 +1449,7 @@ void main() {
 class CompositionLayerRenderer {
     constructor(layer, context) {
         this.usesTextureArrayShaders = false;
+        this.savedVaoState = { vao: null, arrayBuffer: null };
         this.gl = context;
         this.layer = layer;
         let gl = this.gl;
@@ -1473,6 +1478,15 @@ class CompositionLayerRenderer {
             this.programInfo.uniformLocations.u_layer = gl.getUniformLocation(this.program, 'u_layer');
         }
     }
+    saveVaoState() {
+        this.savedVaoState.vao = this.gl.getParameter(this.vaoGl.VERTEX_ARRAY_BINDING);
+        this.savedVaoState.arrayBuffer = this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING);
+    }
+    restoreVaoState() {
+        this.vaoGl.bindVertexArray(this.savedVaoState.vao);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer);
+        this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
+    }
     initialize() {
         let gl = this.gl;
         if (this.layer.isMediaLayer()) {
@@ -1492,9 +1506,11 @@ class CompositionLayerRenderer {
         this._createVAOs();
     }
     render(session, frame) {
+        this.saveVaoState();
         let gl = this.gl;
         let baseLayer = session.getBaseLayer();
         let basePose = frame.getViewerPose(session.getReferenceSpace());
+        const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
         for (let view of basePose.views) {
             let viewport = baseLayer.getViewport(view);
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
@@ -1524,6 +1540,7 @@ class CompositionLayerRenderer {
                 else {
                     this._renderInternal(session, frame, view, layer);
                 }
+                gl.activeTexture(existingActiveTexture);
                 gl.bindTexture(gl.TEXTURE_2D_ARRAY, existingTextureBinding);
             }
             else {
@@ -1555,9 +1572,11 @@ class CompositionLayerRenderer {
                 else {
                     this._renderInternal(session, frame, view);
                 }
+                gl.activeTexture(existingActiveTexture);
                 gl.bindTexture(gl.TEXTURE_2D, existingTextureBinding);
             }
         }
+        this.restoreVaoState();
     }
     createPositionPoints() {
         return new Float32Array([]);
@@ -1644,6 +1663,7 @@ class CompositionLayerRenderer {
         this._recalculateVertices();
         let gl = this.gl;
         this.vaoGl = applyVAOExtension(gl);
+        this.saveVaoState();
         let positionBuffer = gl.createBuffer();
         this.vao = this.vaoGl.createVertexArray();
         this.vaoGl.bindVertexArray(this.vao);
@@ -1667,8 +1687,7 @@ class CompositionLayerRenderer {
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_texCoord, size, type, normalize, stride, offset);
-        this.vaoGl.bindVertexArray(null);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        this.restoreVaoState();
     }
     _renderInternal(session, frame, view, layer) {
         let gl = this.gl;
@@ -2031,6 +2050,7 @@ void main() {
 `;
 class CubeRenderer {
     constructor(layer, gl) {
+        this.savedVaoState = { vao: null, arrayBuffer: null };
         this.layer = layer;
         this.gl = gl;
         this.transformMatrix = create$1();
@@ -2047,10 +2067,21 @@ class CubeRenderer {
         };
         this._createVAOs();
     }
+    saveVaoState() {
+        this.savedVaoState.vao = this.gl.getParameter(this.vaoGl.VERTEX_ARRAY_BINDING);
+        this.savedVaoState.arrayBuffer = this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING);
+    }
+    restoreVaoState() {
+        this.vaoGl.bindVertexArray(this.savedVaoState.vao);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.savedVaoState.arrayBuffer);
+        this.savedVaoState.vao = this.savedVaoState.arrayBuffer = null;
+    }
     render(session, frame) {
+        this.saveVaoState();
         let gl = this.gl;
         let baseLayer = session.getBaseLayer();
         let basePose = frame.getViewerPose(session.getReferenceSpace());
+        const existingActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
         for (let view of basePose.views) {
             let viewport = baseLayer.getViewport(view);
             gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
@@ -2066,8 +2097,10 @@ class CubeRenderer {
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             this._renderInternal(this.layer.orientation, view);
+            gl.activeTexture(existingActiveTexture);
             gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding);
         }
+        this.restoreVaoState();
     }
     createPositionPoints() {
         const w = 0.5;
@@ -2149,6 +2182,7 @@ class CubeRenderer {
         this._recalculateVertices();
         let gl = this.gl;
         this.vaoGl = applyVAOExtension(gl);
+        this.saveVaoState();
         let positionBuffer = gl.createBuffer();
         this.vao = this.vaoGl.createVertexArray();
         this.vaoGl.bindVertexArray(this.vao);
@@ -2162,8 +2196,7 @@ class CubeRenderer {
         var stride = 0;
         var offset = 0;
         gl.vertexAttribPointer(this.programInfo.attribLocations.a_position, size, type, normalize, stride, offset);
-        this.vaoGl.bindVertexArray(null);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        this.restoreVaoState();
     }
 }
 
