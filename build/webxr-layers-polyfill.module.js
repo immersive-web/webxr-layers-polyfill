@@ -271,6 +271,12 @@ class XRCompositionLayerPolyfill {
             if (internalFormat === this.context.DEPTH_STENCIL) {
                 internalFormat = this.context.DEPTH24_STENCIL8;
             }
+            if (internalFormat === this.context.SRGB) {
+                textureFormat = this.context.RGB;
+            }
+            if (internalFormat === this.context.SRGB8_ALPHA8) {
+                textureFormat = this.context.RGBA;
+            }
         }
         let texImageType = this.context.UNSIGNED_BYTE;
         if (textureFormat === this.context.DEPTH_COMPONENT) {
