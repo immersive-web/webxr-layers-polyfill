@@ -449,6 +449,12 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 		if (this.context instanceof WebGL2RenderingContext) {
 			if (internalFormat === this.context.DEPTH_COMPONENT) {
 				internalFormat = this.context.DEPTH_COMPONENT24
+			} else if (internalFormat === this.context.DEPTH_COMPONENT24) {
+				textureFormat = this.context.DEPTH_COMPONENT;
+			} else if (internalFormat === this.context.DEPTH24_STENCIL8) {
+				// ??
+				// this is possible?
+				textureFormat = this.context.DEPTH_STENCIL;
 			}
 			if (internalFormat === this.context.DEPTH_STENCIL) {
 				internalFormat = this.context.DEPTH24_STENCIL8
@@ -472,17 +478,17 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 		// For depth components, UNSIGNED_BYTE is not a valid image type
 		// we need to use UNSIGNED_INT instead.
 		let texImageType = this.context.UNSIGNED_BYTE
-		if (textureFormat === this.context.DEPTH_COMPONENT) {
+		if (internalFormat === this.context.DEPTH_COMPONENT) {
 			texImageType = this.context.UNSIGNED_INT
 		}
 
 		if (this.context instanceof WebGL2RenderingContext) {
-			if (textureFormat === this.context.DEPTH_COMPONENT24) {
+			if (internalFormat === this.context.DEPTH_COMPONENT24) {
 				texImageType = this.context.UNSIGNED_INT
 			}
 			if (
-				textureFormat === this.context.DEPTH24_STENCIL8 ||
-				textureFormat === this.context.DEPTH_STENCIL
+				internalFormat === this.context.DEPTH24_STENCIL8 ||
+				internalFormat === this.context.DEPTH_STENCIL
 			) {
 				texImageType = this.context.UNSIGNED_INT_24_8
 			}
