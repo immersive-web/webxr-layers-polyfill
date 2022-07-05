@@ -452,11 +452,8 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 			} else if (internalFormat === this.context.DEPTH_COMPONENT24) {
 				textureFormat = this.context.DEPTH_COMPONENT;
 			} else if (internalFormat === this.context.DEPTH24_STENCIL8) {
-				// ??
-				// this is possible?
 				textureFormat = this.context.DEPTH_STENCIL;
-			}
-			if (internalFormat === this.context.DEPTH_STENCIL) {
+			} else if (internalFormat === this.context.DEPTH_STENCIL) {
 				internalFormat = this.context.DEPTH24_STENCIL8
 			}
 			// SRGB and SRGB8_ALPHA8 not valid component for texture format
