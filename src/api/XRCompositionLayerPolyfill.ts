@@ -461,6 +461,11 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 			if (internalFormat === this.context.SRGB8_ALPHA8) {
 				textureFormat = this.context.RGBA
 			}
+			// ThreeJS still use RGBA8 as projection layer source
+			// https://github.com/mrdoob/three.js/blob/master/src/renderers/webxr/WebXRManager.js#L307
+			if (internalFormat === this.context.RGBA8) {
+				textureFormat = this.context.RGBA;
+			}
 		}
 
 		// calculate the texture's image type
