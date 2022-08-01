@@ -462,8 +462,8 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 				textureFormat = this.context.RGBA
 			}
 			if (internalFormat === this.context.RGBA8) {
-                		textureFormat = this.context.RGBA;
-            		}
+				textureFormat = this.context.RGBA
+			}
 		}
 
 		// calculate the texture's image type
@@ -483,7 +483,7 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 				textureFormat === this.context.DEPTH_STENCIL
 			) {
 				internalFormat = this.context.DEPTH24_STENCIL8
-                		textureFormat = this.context.DEPTH_STENCIL
+				textureFormat = this.context.DEPTH_STENCIL
 				texImageType = this.context.UNSIGNED_INT_24_8
 			}
 		} else {
