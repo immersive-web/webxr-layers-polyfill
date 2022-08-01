@@ -288,8 +288,8 @@ export class XRSessionWithLayer {
 	public updateRenderState(XRRenderStateInit: XRRenderStateWithLayer): void {
 		this.existingBaseLayer = XRRenderStateInit.baseLayer
 
-		if (XRRenderStateInit.layers){
-            		this.layers = XRRenderStateInit.layers;
+		if (XRRenderStateInit.layers) {
+			this.layers = XRRenderStateInit.layers
 		}
 
 		if (!this.activeRenderState) {
