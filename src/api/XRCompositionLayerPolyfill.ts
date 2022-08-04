@@ -22,6 +22,7 @@ import {
 	XRTextureType,
 	XRWebGLRenderingContext,
 } from '../types'
+import { getFormatsFromInternalFormat } from '../utils/get-formats-from-internal-format'
 
 export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 	public layout: XRLayerLayout
@@ -446,43 +447,18 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 		// DEPTH_COMPONENT is not a valid internalFormat in WebGL2.
 		// https://stackoverflow.com/a/60703526
 		let internalFormat = textureFormat
-		if (this.context instanceof WebGL2RenderingContext) {
-			if (internalFormat === this.context.DEPTH_COMPONENT) {
-				internalFormat = this.context.DEPTH_COMPONENT24
-			}
-			if (internalFormat === this.context.DEPTH_STENCIL) {
-				internalFormat = this.context.DEPTH24_STENCIL8
-			}
-			// SRGB and SRGB8_ALPHA8 not valid component for texture format
-			// https://www.khronos.org/registry/webgl/specs/latest/2.0/#TEXTURE_TYPES_FORMATS_FROM_DOM_ELEMENTS_TABLE
-			if (internalFormat === this.context.SRGB) {
-				textureFormat = this.context.RGB
-			}
-			if (internalFormat === this.context.SRGB8_ALPHA8) {
-				textureFormat = this.context.RGBA
-			}
-		}
-
-		// calculate the texture's image type
-		// For depth components, UNSIGNED_BYTE is not a valid image type
-		// we need to use UNSIGNED_INT instead.
 		let texImageType = this.context.UNSIGNED_BYTE
-		if (textureFormat === this.context.DEPTH_COMPONENT) {
-			texImageType = this.context.UNSIGNED_INT
-		}
 
 		if (this.context instanceof WebGL2RenderingContext) {
-			if (textureFormat === this.context.DEPTH_COMPONENT24) {
-				texImageType = this.context.UNSIGNED_INT
-			}
-			if (
-				textureFormat === this.context.DEPTH24_STENCIL8 ||
-				textureFormat === this.context.DEPTH_STENCIL
-			) {
-				texImageType = this.context.UNSIGNED_INT_24_8
-			}
+			const expectedFormats = getFormatsFromInternalFormat(this.context, textureFormat)
+			internalFormat = expectedFormats.internalFormat
+			textureFormat = expectedFormats.textureFormat
+			texImageType = expectedFormats.type
 		} else {
 			// WebGL1 specific code
+			if (textureFormat === this.context.DEPTH_COMPONENT) {
+				texImageType = this.context.UNSIGNED_INT
+			}
 			if (textureFormat === this.context.DEPTH_STENCIL) {
 				// this only exists if we have the WEBGL_depth_texture extension, but
 				// we assume that we must have it in order to get this far.
