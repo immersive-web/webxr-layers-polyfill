@@ -75,6 +75,196 @@
                     : {};
     };
 
+    const getFormatsFromInternalFormat = (context, providedFormat) => {
+        switch (providedFormat) {
+            case context.RGBA8:
+            case context.RGB5_A1:
+            case context.RGBA4:
+            case context.SRGB8_ALPHA8:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA,
+                    type: context.UNSIGNED_BYTE,
+                };
+            case context.RGBA8_SNORM:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA,
+                    type: context.BYTE,
+                };
+            case context.RGB10_A2:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA,
+                    type: context.UNSIGNED_INT_2_10_10_10_REV,
+                };
+            case context.RGBA16F:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA,
+                    type: context.HALF_FLOAT,
+                };
+            case context.RGBA32F:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA,
+                    type: context.FLOAT,
+                };
+            case context.RGBA8UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.UNSIGNED_BYTE,
+                };
+            case context.RGBA8I:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.BYTE,
+                };
+            case context.RGBA16UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.UNSIGNED_SHORT,
+                };
+            case context.RGBA16I:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.SHORT,
+                };
+            case context.RGBA32UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.UNSIGNED_INT,
+                };
+            case context.RGBA32I:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.INT,
+                };
+            case context.RGB10_A2UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGBA_INTEGER,
+                    type: context.UNSIGNED_INT_2_10_10_10_REV,
+                };
+            case context.RGB8:
+            case context.RGB565:
+            case context.SRGB8:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB,
+                    type: context.UNSIGNED_BYTE,
+                };
+            case context.RGB8_SNORM:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB,
+                    type: context.BYTE,
+                };
+            case context.RGB16F:
+            case context.R11F_G11F_B10F:
+            case context.RGB9_E5:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB,
+                    type: context.HALF_FLOAT,
+                };
+            case context.RGB32F:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB,
+                    type: context.FLOAT,
+                };
+            case context.RGB8UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB_INTEGER,
+                    type: context.UNSIGNED_BYTE,
+                };
+            case context.RGB8I:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB_INTEGER,
+                    type: context.BYTE,
+                };
+            case context.RGB16UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB_INTEGER,
+                    type: context.UNSIGNED_SHORT,
+                };
+            case context.RGB16I:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB_INTEGER,
+                    type: context.SHORT,
+                };
+            case context.RGB32UI:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB_INTEGER,
+                    type: context.UNSIGNED_INT,
+                };
+            case context.RGB32I:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.RGB_INTEGER,
+                    type: context.INT,
+                };
+            case context.DEPTH_COMPONENT16:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.DEPTH_COMPONENT,
+                    type: context.UNSIGNED_SHORT,
+                };
+            case context.DEPTH_COMPONENT24:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.DEPTH_COMPONENT,
+                    type: context.UNSIGNED_INT,
+                };
+            case context.DEPTH_COMPONENT32F:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.DEPTH_COMPONENT,
+                    type: context.FLOAT,
+                };
+            case context.DEPTH24_STENCIL8:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.DEPTH_STENCIL,
+                    type: context.UNSIGNED_INT_24_8,
+                };
+            case context.DEPTH32F_STENCIL8:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: context.DEPTH_STENCIL,
+                    type: context.FLOAT_32_UNSIGNED_INT_24_8_REV,
+                };
+            case context.DEPTH_COMPONENT:
+                return getFormatsFromInternalFormat(context, context.DEPTH_COMPONENT24);
+            case context.DEPTH_STENCIL:
+                return getFormatsFromInternalFormat(context, context.DEPTH24_STENCIL8);
+            case context.RGBA:
+            case context.RGB:
+            case context.LUMINANCE_ALPHA:
+            case context.LUMINANCE:
+            case context.ALPHA:
+                return {
+                    internalFormat: providedFormat,
+                    textureFormat: providedFormat,
+                    type: context.UNSIGNED_BYTE,
+                };
+            default:
+                throw new Error('Attempted to create polyfill with unsupported format.');
+        }
+    };
+
     class XRCompositionLayerPolyfill {
         constructor() {
             this._hasRunDeferredInitialize = false;
@@ -270,34 +460,17 @@
                 texture,
             };
             let internalFormat = textureFormat;
-            if (this.context instanceof WebGL2RenderingContext) {
-                if (internalFormat === this.context.DEPTH_COMPONENT) {
-                    internalFormat = this.context.DEPTH_COMPONENT24;
-                }
-                if (internalFormat === this.context.DEPTH_STENCIL) {
-                    internalFormat = this.context.DEPTH24_STENCIL8;
-                }
-                if (internalFormat === this.context.SRGB) {
-                    textureFormat = this.context.RGB;
-                }
-                if (internalFormat === this.context.SRGB8_ALPHA8) {
-                    textureFormat = this.context.RGBA;
-                }
-            }
             let texImageType = this.context.UNSIGNED_BYTE;
-            if (textureFormat === this.context.DEPTH_COMPONENT) {
-                texImageType = this.context.UNSIGNED_INT;
-            }
             if (this.context instanceof WebGL2RenderingContext) {
-                if (textureFormat === this.context.DEPTH_COMPONENT24) {
-                    texImageType = this.context.UNSIGNED_INT;
-                }
-                if (textureFormat === this.context.DEPTH24_STENCIL8 ||
-                    textureFormat === this.context.DEPTH_STENCIL) {
-                    texImageType = this.context.UNSIGNED_INT_24_8;
-                }
+                const expectedFormats = getFormatsFromInternalFormat(this.context, textureFormat);
+                internalFormat = expectedFormats.internalFormat;
+                textureFormat = expectedFormats.textureFormat;
+                texImageType = expectedFormats.type;
             }
             else {
+                if (textureFormat === this.context.DEPTH_COMPONENT) {
+                    texImageType = this.context.UNSIGNED_INT;
+                }
                 if (textureFormat === this.context.DEPTH_STENCIL) {
                     texImageType = this.context.UNSIGNED_INT_24_8_WEBGL;
                 }
@@ -835,7 +1008,7 @@
         }
         _deferredInitialize() {
             this.isStatic = false;
-            if (!this.init.depthFormat) {
+            if (this.init.depthFormat) {
                 this.ignoreDepthValues = false;
             }
             else {
@@ -2345,7 +2518,9 @@ void main() {
         }
         updateRenderState(XRRenderStateInit) {
             this.existingBaseLayer = XRRenderStateInit.baseLayer;
-            this.layers = XRRenderStateInit.layers || [];
+            if (XRRenderStateInit.layers) {
+                this.layers = XRRenderStateInit.layers;
+            }
             if (!this.activeRenderState) {
                 this.createActiveRenderState();
             }
