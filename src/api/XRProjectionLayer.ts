@@ -272,12 +272,8 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 		// initialize layer.isStatic = false
 		this.isStatic = false
 
-		// TODO: XR Compositor also needs to make use of depth values
-		if (this.init.depthFormat) {
-			this.ignoreDepthValues = false
-		} else {
-			this.ignoreDepthValues = true
-		}
+		// Our polyfill doens't use the depth texture for layer sorting
+		this.ignoreDepthValues = true
 
 		// layer's fixedFoveation should be 0
 		this.fixedFoveation = 0
