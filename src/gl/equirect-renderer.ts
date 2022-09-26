@@ -29,8 +29,14 @@ export class EquirectRenderer extends CompositionLayerRenderer implements LayerR
 	createPositionPoints(): Float32Array {
 		const positions = []
 
-		// TODO: figure out what to do if radius is 0
-		const radius = this.layer.radius || 1
+		let radius = this.layer.radius
+		if (radius === 0) {
+			radius = 25
+		}
+		// TODO investigate why a bigger radius doesn't work
+		if (radius > 25) {
+			radius = 25
+		}
 
 		// this uses spherical coordinates.
 		// theta = the 'horizontal' axis, spanning the x and z axes Note that negative z is forward

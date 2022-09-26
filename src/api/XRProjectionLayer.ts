@@ -13,7 +13,14 @@
  * limitations under the License.
  */
 
-import { PolyfillTexture, XRLayerLayout, XRProjectionLayerInit, XRTextureType } from '../types'
+import {
+	PolyfillTexture,
+	XRLayerLayout,
+	XRSessionPolyfill,
+	XRProjectionLayerInit,
+	XRTextureType,
+	XRWebGLRenderingContext
+} from '../types'
 import XRCompositionLayerPolyfill from './XRCompositionLayerPolyfill'
 
 export const defaultXRProjectionLayerInit: XRProjectionLayerInit = {
@@ -41,6 +48,18 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 		this.init = { ...defaultXRProjectionLayerInit, ...init }
 	}
 
+	initialize(session: XRSessionPolyfill, context?: XRWebGLRenderingContext) {
+		super.initialize(session, context)
+
+		// POLYFILL ONLY: initialize layout
+		this.initializeIfNeeded()
+
+		let baseLayer = session.getBaseLayer()
+
+		this.textureWidth = baseLayer.framebufferWidth * this.init.scaleFactor
+		this.textureHeight = baseLayer.framebufferHeight * this.init.scaleFactor
+	}
+
 	protected _allocateProjectionColorTextures(): void {
 		let array: WebGLTexture[] = []
 		let polyFillArray: PolyfillTexture[] = []
@@ -60,9 +79,6 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 			console.warn("We can't allocate color textures without views")
 			return
 		}
-
-		// POLYFILL ONLY: initialize layout if we haven't already
-		this.initializeIfNeeded()
 
 		let baseLayer = session.getBaseLayer()
 		let numViews = views.length
@@ -271,7 +287,7 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 		// initialize layer.isStatic = false
 		this.isStatic = false
 
-		// Some browser use the depth for reprojection
+		// Some browsers use the depth for reprojection
 		this.ignoreDepthValues = false
 
 		// layer's fixedFoveation should be 0
