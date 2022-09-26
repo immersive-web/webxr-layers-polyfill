@@ -67,8 +67,7 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 		let baseLayer = session.getBaseLayer()
 		let numViews = views.length
 
-		// TODO: in the WebXR Emulator, baseLayer.framebufferWidth is twice this.context.drawingBufferWidth. Investigate.
-		let width = baseLayer.framebufferWidth * this.init.scaleFactor
+		let width = baseLayer.framebufferWidth * this.init.scaleFactor / views.length
 		let height = baseLayer.framebufferHeight * this.init.scaleFactor
 
 		if (this.layout === XRLayerLayout.mono || this.layout === XRLayerLayout.default) {
@@ -178,7 +177,7 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 		let baseLayer = session.getBaseLayer()
 		let numViews = views.length
 
-		let width = baseLayer.framebufferWidth * this.init.scaleFactor
+		let width = baseLayer.framebufferWidth * this.init.scaleFactor / views.length
 		let height = baseLayer.framebufferHeight * this.init.scaleFactor
 
 		if (this.layout === XRLayerLayout.mono || this.layout === XRLayerLayout.default) {
@@ -272,12 +271,8 @@ export default class XRProjectionLayer extends XRCompositionLayerPolyfill {
 		// initialize layer.isStatic = false
 		this.isStatic = false
 
-		// TODO: XR Compositor also needs to make use of depth values
-		if (this.init.depthFormat) {
-			this.ignoreDepthValues = false
-		} else {
-			this.ignoreDepthValues = true
-		}
+		// Some browser use the depth for reprojection
+		this.ignoreDepthValues = false
 
 		// layer's fixedFoveation should be 0
 		this.fixedFoveation = 0
