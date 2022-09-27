@@ -183,6 +183,9 @@ export default class XRWebGLBindingPolyfill {
 		frame: XRFrame,
 		eye: XREye = 'none'
 	): XRWebGLSubImage {
+		if (layer.isStatic && (layer.needsRedraw === false)) {
+			throw new Error('Invalid state for subimage creation')
+		}
 		// if getSubImage was called previously with same binding, layer, and eye, the
 		// user agent may return the same subimage as returned by earlier call
 		let existingSubImage = this.subImageCache.tryGetCachedSubImage(this.context, layer, eye)
