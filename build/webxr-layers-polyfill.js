@@ -1,7 +1,7 @@
 /**
  * @license
  * webxr-layers-polyfill
- * Version 1.0.4
+ * Version 1.0.5
  * Copyright (c) 2021 Facebook, Inc. and its affiliates.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -879,6 +879,13 @@
             super();
             this.init = Object.assign(Object.assign({}, defaultXRProjectionLayerInit), init);
         }
+        initialize(session, context) {
+            super.initialize(session, context);
+            this.initializeIfNeeded();
+            let baseLayer = session.getBaseLayer();
+            this.textureWidth = baseLayer.framebufferWidth * this.init.scaleFactor;
+            this.textureHeight = baseLayer.framebufferHeight * this.init.scaleFactor;
+        }
         _allocateProjectionColorTextures() {
             let array = [];
             let polyFillArray = [];
@@ -894,10 +901,9 @@
                 console.warn("We can't allocate color textures without views");
                 return;
             }
-            this.initializeIfNeeded();
             let baseLayer = session.getBaseLayer();
             let numViews = views.length;
-            let width = baseLayer.framebufferWidth * this.init.scaleFactor;
+            let width = baseLayer.framebufferWidth * this.init.scaleFactor / views.length;
             let height = baseLayer.framebufferHeight * this.init.scaleFactor;
             if (this.layout === XRLayerLayout.mono || this.layout === XRLayerLayout.default) {
                 if (this.init.textureType === XRTextureType['texture-array']) {
@@ -956,7 +962,7 @@
             this.initializeIfNeeded();
             let baseLayer = session.getBaseLayer();
             let numViews = views.length;
-            let width = baseLayer.framebufferWidth * this.init.scaleFactor;
+            let width = baseLayer.framebufferWidth * this.init.scaleFactor / views.length;
             let height = baseLayer.framebufferHeight * this.init.scaleFactor;
             if (this.layout === XRLayerLayout.mono || this.layout === XRLayerLayout.default) {
                 if (this.init.textureType === XRTextureType['texture-array']) {
@@ -1008,12 +1014,7 @@
         }
         _deferredInitialize() {
             this.isStatic = false;
-            if (this.init.depthFormat) {
-                this.ignoreDepthValues = false;
-            }
-            else {
-                this.ignoreDepthValues = true;
-            }
+            this.ignoreDepthValues = false;
             this.fixedFoveation = 0;
             let layout = this.determineLayoutAttribute(this.init.textureType, this.context, XRLayerLayout.default);
             this.layout = layout;
@@ -2013,7 +2014,13 @@ void main() {
         }
         createPositionPoints() {
             const positions = [];
-            const radius = this.layer.radius || 1;
+            let radius = this.layer.radius;
+            if (radius === 0) {
+                radius = 25;
+            }
+            if (radius > 25) {
+                radius = 25;
+            }
             const horizAngle = this.layer.centralHorizontalAngle;
             const phi1 = this.layer.upperVerticalAngle + Math.PI / 2;
             const phi2 = this.layer.lowerVerticalAngle + Math.PI / 2;
@@ -2405,6 +2412,7 @@ void main() {
                         }
                         gl.bindFramebuffer(gl.FRAMEBUFFER, this.tempFramebuffer);
                         const existingClearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE);
+                        const existingFrameBuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
                         gl.clearColor(0, 0, 0, 0);
                         for (let layer of this.layers) {
                             if (!(layer instanceof XRProjectionLayer)) {
@@ -2425,8 +2433,7 @@ void main() {
                                 }
                             }
                         }
-                        gl.bindFramebuffer(gl.FRAMEBUFFER, this.getBaseLayer().framebuffer);
-                        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                        gl.bindFramebuffer(gl.FRAMEBUFFER, existingFrameBuffer);
                         gl.clearColor(existingClearColor[0], existingClearColor[1], existingClearColor[2], existingClearColor[3]);
                     }
                     animationFrameCallback(time, frame);
@@ -2434,7 +2441,11 @@ void main() {
                         let prevBlend = gl.isEnabled(gl.BLEND);
                         let prevDepthTest = gl.isEnabled(gl.DEPTH_TEST);
                         let prevCullFace = gl.isEnabled(gl.CULL_FACE);
+                        const existingFrameBuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+                        const existingClearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE);
                         gl.bindFramebuffer(gl.FRAMEBUFFER, this.getBaseLayer().framebuffer);
+                        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                        gl.clearColor(existingClearColor[0], existingClearColor[1], existingClearColor[2], existingClearColor[3]);
                         gl.enable(gl.BLEND);
                         gl.disable(gl.DEPTH_TEST);
                         gl.disable(gl.CULL_FACE);
@@ -2507,6 +2518,7 @@ void main() {
                             gl.enable(gl.CULL_FACE);
                         }
                         gl.blendFuncSeparate(prevBlendSrcRGB, prevBlendDestRGB, prevBlendSrcAlpha, prevBlendDestAlpha);
+                        gl.bindFramebuffer(gl.FRAMEBUFFER, existingFrameBuffer);
                         while (this.taskQueue.length > 0) {
                             const task = this.taskQueue.shift();
                             task();
