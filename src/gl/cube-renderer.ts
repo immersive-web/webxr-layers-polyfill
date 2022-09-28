@@ -77,6 +77,7 @@ export class CubeRenderer implements LayerRenderer {
 	private positionPoints: Float32Array
 
 	private savedVaoState: VaoState = { vao: null, arrayBuffer: null }
+	private hasMipmap: boolean = false
 
 	constructor(layer: XRCubeLayer, gl: XRWebGLRenderingContext) {
 		this.layer = layer
@@ -137,8 +138,18 @@ export class CubeRenderer implements LayerRenderer {
 				gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.layer.colorTextures[0])
 			}
 
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+			// generate mips for static layers
+			if (this.layer.isStatic) {
+				if (this.layer.needsRedraw === true) {
+					gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
+				}
+				this.hasMipmap = true
+			} else {
+				this.hasMipmap = this.layer.mipLevels > 0
+			}
+
+			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, this.hasMipmap? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR)
+			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, this.hasMipmap? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR)
 
 			this._renderInternal(this.layer.orientation, view)
 
@@ -160,35 +171,35 @@ export class CubeRenderer implements LayerRenderer {
          -w,  w,  -w,
           w,  w,  -w,
           w, -w,  -w,
-     
+
          -w, -w,   w,
           w, -w,   w,
          -w,  w,   w,
          -w,  w,   w,
           w, -w,   w,
           w,  w,   w,
-     
+
          -w,   w, -w,
          -w,   w,  w,
           w,   w, -w,
          -w,   w,  w,
           w,   w,  w,
           w,   w, -w,
-     
+
          -w,  -w, -w,
           w,  -w, -w,
          -w,  -w,  w,
          -w,  -w,  w,
           w,  -w, -w,
           w,  -w,  w,
-     
+
          -w,  -w, -w,
          -w,  -w,  w,
          -w,   w, -w,
          -w,  -w,  w,
          -w,   w,  w,
          -w,   w, -w,
-     
+
           w,  -w, -w,
           w,   w, -w,
           w,  -w,  w,

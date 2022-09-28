@@ -81,7 +81,7 @@ out vec2 v_texCoord;
 void main() {
 	// Multiply the position by the matrix.
     gl_Position = u_projectionMatrix * u_matrix * a_position;
- 
+
 	// pass the texCoord to the fragment shader
 	// The GPU will interpolate this value between points.
 	v_texCoord = a_texCoord;
@@ -158,6 +158,7 @@ export class CompositionLayerRenderer {
 	protected mediaTexture: WebGLTexture
 
 	private savedVaoState: VaoState = { vao: null, arrayBuffer: null }
+	private hasMipmap: boolean = false;
 
 	constructor(layer: FlatLayer, context: XRWebGLRenderingContext) {
 		this.gl = context
@@ -282,8 +283,19 @@ export class CompositionLayerRenderer {
 				const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY)
 
 				gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0])
-				gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-				gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+
+				// generate mips for static layers
+				if (this.layer.isStatic) {
+					if (this.layer.needsRedraw === true) {
+						gl.generateMipmap(gl.TEXTURE_2D_ARRAY)
+					}
+					this.hasMipmap = true
+				} else {
+					this.hasMipmap = this.layer.mipLevels > 0
+				}
+
+				gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, this.hasMipmap? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR)
+				gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, this.hasMipmap? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR)
 
 				let layer: number = 0
 				if (this.layer.layout === XRLayerLayout.stereo) {
@@ -336,11 +348,21 @@ export class CompositionLayerRenderer {
 					gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0])
 				}
 
+				// generate mips for static layers
+				if (this.layer.isStatic) {
+					if (this.layer.needsRedraw === true) {
+						gl.generateMipmap(gl.TEXTURE_2D)
+					}
+					this.hasMipmap = true
+				} else {
+					this.hasMipmap = this.layer.mipLevels > 0
+				}
+
 				// Set the parameters so we can render any size image.
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.hasMipmap? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR)
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.hasMipmap? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR)
 
 				// for stereo-left-right and stereo-top-bottom, we need to update
 				// the texture UVs to get the correct slice of texture

@@ -131,7 +131,7 @@ class ProjectionRenderer implements LayerRenderer {
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 		} else {
-			throw new Error(`Created a texture projection renderer instead of a texture-array projection renderer for a texture-array layer. 
+			throw new Error(`Created a texture projection renderer instead of a texture-array projection renderer for a texture-array layer.
 This is probably an error with the polyfill itself; please file an issue on Github if you run into this.`)
 		}
 
@@ -369,12 +369,12 @@ void main() {
 
 	// convert from 0->1 to 0->2
 	vec2 zeroToTwo = zeroToOne * 2.0;
- 
+
 	// convert from 0->2 to -1->+1 (clipspace)
 	vec2 clipSpace = zeroToTwo - 1.0;
- 
+
 	gl_Position = vec4(clipSpace * vec2(1, 1), 0, 1);
- 
+
 	// pass the texCoord to the fragment shader
 	// The GPU will interpolate this value between points.
 	v_texCoord = a_texCoord;
