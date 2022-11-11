@@ -87,7 +87,7 @@ export class XRSessionWithLayer {
 				}
 
 				// Layers MUST be cleared to (0, 0, 0, 0) at the beginning of the frame
-				if (this.isPolyfillActive) {
+				if (this.isPolyfillActive && this.initializedViews) {
 					if (!this.tempFramebuffer) {
 						this.tempFramebuffer = gl.createFramebuffer()
 					}
