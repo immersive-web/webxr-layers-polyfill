@@ -119,7 +119,6 @@ export interface XRCompositionLayer extends XRLayer {
 	depthStencilTextures: WebGLTexture[]
 
 	blendTextureSourceAlpha: boolean
-	chromaticAberrationCorrection?: boolean
 	readonly mipLevels: number
 	readonly needsRedraw: boolean
 	destroy(): void

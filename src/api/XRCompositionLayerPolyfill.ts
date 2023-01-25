@@ -28,7 +28,6 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 	public layout: XRLayerLayout
 
 	public blendTextureSourceAlpha: boolean
-	public chromaticAberrationCorrection: boolean
 
 	public mipLevels: number
 	public needsRedraw: boolean
@@ -57,10 +56,6 @@ export default class XRCompositionLayerPolyfill implements XRCompositionLayer {
 		}
 
 		this.blendTextureSourceAlpha = true
-
-		// if user agent supports chromatic abberation correction,
-		// we should honor user agent. But the polyfill can't do that.
-		this.chromaticAberrationCorrection = false
 	}
 
 	destroy() {
