@@ -276,7 +276,6 @@
                 this.context = context;
             }
             this.blendTextureSourceAlpha = true;
-            this.chromaticAberrationCorrection = false;
         }
         destroy() {
             this._colorTextures = [];
@@ -1174,7 +1173,7 @@ void main() {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
             }
             else {
-                throw new Error(`Created a texture projection renderer instead of a texture-array projection renderer for a texture-array layer. 
+                throw new Error(`Created a texture projection renderer instead of a texture-array projection renderer for a texture-array layer.
 This is probably an error with the polyfill itself; please file an issue on Github if you run into this.`);
             }
             for (let view of session.internalViews) {
@@ -1324,12 +1323,12 @@ void main() {
 
 	// convert from 0->1 to 0->2
 	vec2 zeroToTwo = zeroToOne * 2.0;
- 
+
 	// convert from 0->2 to -1->+1 (clipspace)
 	vec2 clipSpace = zeroToTwo - 1.0;
- 
+
 	gl_Position = vec4(clipSpace * vec2(1, 1), 0, 1);
- 
+
 	// pass the texCoord to the fragment shader
 	// The GPU will interpolate this value between points.
 	v_texCoord = a_texCoord;
@@ -1602,7 +1601,7 @@ out vec2 v_texCoord;
 void main() {
 	// Multiply the position by the matrix.
     gl_Position = u_projectionMatrix * u_matrix * a_position;
- 
+
 	// pass the texCoord to the fragment shader
 	// The GPU will interpolate this value between points.
 	v_texCoord = a_texCoord;
@@ -1630,6 +1629,7 @@ void main() {
         constructor(layer, context) {
             this.usesTextureArrayShaders = false;
             this.savedVaoState = { vao: null, arrayBuffer: null };
+            this.hasMipmap = false;
             this.gl = context;
             this.layer = layer;
             let gl = this.gl;
@@ -1704,8 +1704,17 @@ void main() {
                     }
                     const existingTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D_ARRAY);
                     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.layer.colorTextures[0]);
-                    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-                    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    if (this.layer.isStatic) {
+                        if (this.layer.needsRedraw === true) {
+                            gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
+                        }
+                        this.hasMipmap = true;
+                    }
+                    else {
+                        this.hasMipmap = this.layer.mipLevels > 0;
+                    }
+                    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, this.hasMipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, this.hasMipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
                     let layer = 0;
                     if (this.layer.layout === XRLayerLayout.stereo) {
                         switch (view.eye) {
@@ -1742,10 +1751,19 @@ void main() {
                     else {
                         gl.bindTexture(gl.TEXTURE_2D, this.layer.colorTextures[0]);
                     }
+                    if (this.layer.isStatic) {
+                        if (this.layer.needsRedraw === true) {
+                            gl.generateMipmap(gl.TEXTURE_2D);
+                        }
+                        this.hasMipmap = true;
+                    }
+                    else {
+                        this.hasMipmap = this.layer.mipLevels > 0;
+                    }
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.hasMipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.hasMipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
                     if (this._shouldUseStereoTexturePoints()) {
                         this._renderInternalStereo(session, frame, view);
                     }
@@ -2237,6 +2255,7 @@ void main() {
     class CubeRenderer {
         constructor(layer, gl) {
             this.savedVaoState = { vao: null, arrayBuffer: null };
+            this.hasMipmap = false;
             this.layer = layer;
             this.gl = gl;
             this.transformMatrix = create();
@@ -2280,8 +2299,17 @@ void main() {
                 else {
                     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.layer.colorTextures[0]);
                 }
-                gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-                gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                if (this.layer.isStatic) {
+                    if (this.layer.needsRedraw === true) {
+                        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+                    }
+                    this.hasMipmap = true;
+                }
+                else {
+                    this.hasMipmap = this.layer.mipLevels > 0;
+                }
+                gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, this.hasMipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, this.hasMipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
                 this._renderInternal(this.layer.orientation, view);
                 gl.activeTexture(existingActiveTexture);
                 gl.bindTexture(gl.TEXTURE_CUBE_MAP, existingTextureBinding);
@@ -2406,7 +2434,7 @@ void main() {
                             this.initializedViews = true;
                         }
                     }
-                    if (this.isPolyfillActive) {
+                    if (this.isPolyfillActive && this.initializedViews) {
                         if (!this.tempFramebuffer) {
                             this.tempFramebuffer = gl.createFramebuffer();
                         }
@@ -2739,6 +2767,9 @@ void main() {
             return layer;
         }
         getSubImage(layer, frame, eye = 'none') {
+            if (layer.isStatic && (layer.needsRedraw === false)) {
+                throw new Error('Invalid state for subimage creation');
+            }
             let existingSubImage = this.subImageCache.tryGetCachedSubImage(this.context, layer, eye);
             if (existingSubImage) {
                 return existingSubImage;
