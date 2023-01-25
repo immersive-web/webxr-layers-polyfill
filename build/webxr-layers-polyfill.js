@@ -1,7 +1,7 @@
 /**
  * @license
  * webxr-layers-polyfill
- * Version 1.0.5
+ * Version 1.1.0
  * Copyright (c) 2021 Facebook, Inc. and its affiliates.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
