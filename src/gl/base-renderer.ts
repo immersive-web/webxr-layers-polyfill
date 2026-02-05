@@ -328,8 +328,6 @@ export class CompositionLayerRenderer {
 						0,
 						0,
 						0,
-						this.layer.media.videoWidth,
-						this.layer.media.videoHeight,
 						gl.RGBA,
 						gl.UNSIGNED_BYTE,
 						this.layer.media as any
